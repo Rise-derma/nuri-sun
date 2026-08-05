@@ -74,12 +74,23 @@ body.mode-night .logo{color:#fff}
 /* ============ ホーム:太陽とリング ============ */
 .hero{display:flex;flex-direction:column;align-items:center;padding:6px 0 2px}
 .ringwrap{position:relative;width:216px;height:216px;margin:2px auto 6px}
-.ringwrap svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ringwrap > svg{
+  position:absolute;
+  inset:0;
+  transform:rotate(-90deg);
+}
 .ring-bg{fill:none;stroke:rgba(255,255,255,.7);stroke-width:12}
 body.mode-night .ring-bg{stroke:rgba(255,255,255,.25)}
 .ring-fg{fill:none;stroke:var(--sun);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .4s}
 .mascot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 6px 14px rgba(255,160,0,.35));animation:bob 3.2s ease-in-out infinite}
-.mascot svg{width:120px;height:120px;display:block}
+.mascot svg{
+  position:static;
+  inset:auto;
+  transform:none;
+  width:120px;
+  height:120px;
+  display:block;
+}
 .mascot.m-night .ns-rays{display:none}
 .mascot .ns-rays{animation:raysSpin 30s linear infinite;transform-origin:60px 60px}
 @keyframes raysSpin{to{transform:rotate(360deg)}}
