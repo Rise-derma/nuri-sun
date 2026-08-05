@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#A8E0FF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>ぬりサン! ☀️ 光老化よぼうアプリ</title>
+<style>
+/* ============ トークン ============ */
+:root{
+  --sky1:#A8E0FF; --sky2:#FFF3C9;          /* そらいろ / ひかり */
+  --sun:#FFB300;  --sun2:#FF8A3D;          /* サンイエロー / ゆうやけ */
+  --coral:#FF6B6B;                          /* アラート */
+  --ink:#2B3A55;  --sub:#5B6C8D;            /* インク / サブ */
+  --accentText:#A84600;                      /* 小さい文字にも使える濃いオレンジ */
+  --card:rgba(255,255,255,.88);
+  --line:#E4EDF7;
+  --night1:#35406B; --night2:#5B5F93;
+  --r:22px;
+  --shadow:0 10px 26px rgba(60,90,140,.16);
+  --tabH:64px;
+  --tabActualH:calc(var(--tabH) + var(--safeBottom));
+  --safeTop:env(safe-area-inset-top, 0px);
+  --safeRight:env(safe-area-inset-right, 0px);
+  --safeBottom:env(safe-area-inset-bottom, 0px);
+  --safeLeft:env(safe-area-inset-left, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+html,body{height:100%}
+body{
+  font-family:'Hiragino Maru Gothic ProN','ヒラギノ丸ゴ ProN W4','BIZ UDPGothic','Yu Gothic','Meiryo',system-ui,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,var(--sky1),var(--sky2) 80%);
+  background-attachment:fixed;
+  transition:background 1.2s ease;
+  min-height:100dvh;
+  overflow-x:hidden;
+}
+/* 状態で空の色が変わる(このアプリのシグネチャー) */
+body.mode-due{background:linear-gradient(180deg,#FFC9A3,#FFE0B8 80%)}
+body.mode-night{background:linear-gradient(180deg,var(--night1),var(--night2) 85%)}
+body.mode-night{--card:rgba(255,255,255,.93)}
+body.modal-open{overflow:hidden;overscroll-behavior:none;touch-action:none}
+body.modal-open .sheet{touch-action:pan-y}
+
+/* ふわふわ雲 */
+.cloud{position:fixed;border-radius:999px;background:rgba(255,255,255,.55);filter:blur(2px);z-index:0;pointer-events:none}
+.cloud.c1{width:180px;height:56px;top:8%;left:-60px;animation:drift 70s linear infinite}
+.cloud.c2{width:130px;height:44px;top:22%;right:-50px;animation:drift 95s linear infinite reverse}
+@keyframes drift{from{transform:translateX(-20vw)}to{transform:translateX(120vw)}}
+body.mode-night .cloud{background:rgba(255,255,255,.14)}
+
+/* ============ レイアウト ============ */
+#app{position:relative;z-index:1;max-width:430px;margin:0 auto;padding:calc(14px + var(--safeTop)) calc(16px + var(--safeRight)) calc(var(--tabActualH) + 26px) calc(16px + var(--safeLeft))}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 12px}
+.logo{font-size:22px;font-weight:800;letter-spacing:.02em;display:flex;flex-direction:column;align-items:flex-start;gap:1px;line-height:1.2}
+.logo small{display:block;font-size:10.5px;font-weight:800;color:var(--sub);letter-spacing:.04em;margin-left:0;white-space:nowrap}
+.logo small rt{font-size:6.5px;letter-spacing:0;font-weight:800}
+body.mode-night .logo small{color:#D7DBF5}
+body.mode-night .logo{color:#fff}
+.iconbtn{border:0;background:var(--card);box-shadow:var(--shadow);width:42px;height:42px;border-radius:14px;font-size:19px;cursor:pointer;transition:transform .12s}
+.iconbtn:active{transform:scale(.92)}
+
+.view{display:none}
+.view.active{display:block;animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;backdrop-filter:blur(6px)}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--sub);margin-bottom:8px}
+
+/* ============ ホーム:太陽とリング ============ */
+.hero{display:flex;flex-direction:column;align-items:center;padding:6px 0 2px}
+.ringwrap{position:relative;width:216px;height:216px;margin:2px auto 6px}
+.ringwrap svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.7);stroke-width:12}
+body.mode-night .ring-bg{stroke:rgba(255,255,255,.25)}
+.ring-fg{fill:none;stroke:var(--sun);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke .4s}
+.mascot{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 6px 14px rgba(255,160,0,.35));animation:bob 3.2s ease-in-out infinite}
+.mascot svg{width:120px;height:120px;display:block}
+.mascot.m-night .ns-rays{display:none}
+.mascot .ns-rays{animation:raysSpin 30s linear infinite;transform-origin:60px 60px}
+@keyframes raysSpin{to{transform:rotate(360deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+body.mode-due .mascot{animation:shake .5s ease-in-out infinite}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+body.mode-due .ring-fg{stroke:var(--coral)}
+body.mode-night .ring-fg{stroke:#9BA6E8}
+
+.status-title{font-size:19px;font-weight:800;text-align:center;line-height:1.45}
+.status-sub{font-size:13px;color:var(--sub);text-align:center;margin-top:5px;line-height:1.6}
+body.mode-night .status-title{color:#fff}
+body.mode-night .status-sub{color:#D7DBF5}
+.countdown{font-size:44px;font-weight:800;letter-spacing:.03em;text-align:center;font-variant-numeric:tabular-nums;margin-top:4px}
+body.mode-night .countdown{color:#fff}
+body.mode-due .countdown{color:var(--coral)}
+
+.bigbtn{
+  display:block;width:100%;margin:16px 0 6px;padding:20px;border:0;border-radius:26px;cursor:pointer;
+  font-family:inherit;font-size:24px;font-weight:800;color:var(--ink);letter-spacing:.06em;
+  background:linear-gradient(135deg,var(--sun),var(--sun2));
+  box-shadow:0 12px 26px rgba(255,150,40,.42), inset 0 -4px 0 rgba(0,0,0,.08);
+  transition:transform .12s;
+}
+.bigbtn:active{transform:scale(.96)}
+body.mode-due .bigbtn{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 12px 26px rgba(255,110,110,.5)}50%{box-shadow:0 12px 40px rgba(255,110,110,.85)}}
+
+  .chips{display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap}
+.coin{display:inline-block;width:17px;height:17px;line-height:17px;border-radius:50%;background:linear-gradient(135deg,#FFE27A,#FFA000);color:#8A5A00;font-size:10px;text-align:center;font-weight:800;vertical-align:-3px;box-shadow:inset 0 -1.5px 0 rgba(0,0,0,.15)}
+.coinbar{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;color:var(--sub);margin-bottom:10px}
+  .coinbar b{font-size:17px;color:var(--ink)}
+.nextun{display:block;width:100%;text-align:center;font-size:11px;color:var(--accentText);font-weight:800;margin-top:2px}
+.coinbar{flex-wrap:wrap}
+.tile .t-price{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.tile.buyable .t-price{background:linear-gradient(135deg,var(--sun),var(--sun2));color:var(--ink)}
+.tile.confirm{border-color:var(--sun);background:#FFF7E2}
+.tile.confirm .t-price{background:#A51D2D}
+.chip{background:var(--card);border-radius:999px;box-shadow:var(--shadow);padding:9px 15px;font-size:13px;font-weight:800}
+.chip b{font-size:16px}
+
+/* UVゲージ */
+.uvbar{position:relative;height:12px;border-radius:99px;margin:10px 0 6px;
+  background:linear-gradient(90deg,#7BD98A 0 18%,#FFD84D 18% 45%,#FF9E3D 45% 64%,#FF6B6B 64% 90%,#B76BFF 90%)}
+.uvmark{position:absolute;top:-5px;width:22px;height:22px;border-radius:50%;background:#fff;border:4px solid var(--ink);transform:translateX(-50%);transition:left .6s}
+.uvrow{display:flex;justify-content:space-between;align-items:baseline}
+.uvval{font-size:15px;font-weight:800}
+.uvadvice{font-size:13px;line-height:1.7;margin-top:6px}
+.disclaimer{font-size:10.5px;color:var(--sub);margin-top:8px;line-height:1.6}
+.disclaimer.credit{margin-top:6px}
+.disclaimer a{color:var(--sub);text-decoration:underline}
+.uvbadge{display:inline-block;background:#E3ECF7;color:#566786;font-size:9px;font-weight:800;letter-spacing:.1em;padding:2px 8px;border-radius:99px;vertical-align:1px;margin-left:4px}
+.uvbadge.live{background:#DFF5E6;color:#116B3C}
+
+/* ヒント */
+.tip{display:flex;gap:10px;align-items:flex-start}
+.tip .t-emoji{font-size:24px}
+.tip p{font-size:13px;line-height:1.8;flex:1}
+.tiplink{border:0;background:none;color:var(--accentText);font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;padding:6px 0 0;letter-spacing:.04em}
+
+/* ============ 図鑑 ============ */
+.progress{height:14px;border-radius:99px;background:#EAF1F9;overflow:hidden;margin:8px 0 4px}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--sun),var(--sun2));border-radius:99px;transition:width .5s}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.slot{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:10px 4px 8px;text-align:center;position:relative}
+.slot .s-emoji{font-size:32px;line-height:1.2}
+.slot.locked .s-emoji{filter:grayscale(1) opacity(.28)}
+.slot .s-name{font-size:9.5px;font-weight:800;margin-top:4px;line-height:1.3}
+.slot.locked .s-name{color:#647493}
+.slot .s-stars{font-size:9px;letter-spacing:.08em}
+.stars-1{color:#647493}.stars-2{color:#0067B1}.stars-3{color:#7B36A6}.stars-4{color:#9A5200}
+.slot .s-count{position:absolute;top:-6px;right:-4px;background:var(--ink);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:2px 6px}
+
+.note{font-size:11px;color:var(--sub);line-height:1.7}
+.center{text-align:center}
+
+/* ============ きろく ============ */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:14px;text-align:center}
+.stat .v{font-size:26px;font-weight:800;line-height:1.2}
+.stat .v small{font-size:12px}
+.stat .l{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.1em;margin-top:2px}
+.dayrow{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1.5px dashed var(--line);font-size:13px}
+.dayrow:last-child{border-bottom:0}
+.dayrow .d{width:74px;font-weight:800;color:var(--sub)}
+.dayrow .suns{flex:1;letter-spacing:2px}
+.dayrow .none{color:#647493}
+
+/* ============ タブバー ============ */
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;pointer-events:none}
+.tabinner{pointer-events:auto;display:flex;width:min(430px,100%);background:rgba(255,255,255,.94);backdrop-filter:blur(10px);box-shadow:0 -6px 24px rgba(60,90,140,.14);border-radius:24px 24px 0 0;padding:8px calc(6px + var(--safeRight)) calc(8px + var(--safeBottom)) calc(6px + var(--safeLeft))}
+.tab{flex:1;border:0;background:none;font-family:inherit;cursor:pointer;padding:6px 0;border-radius:16px;color:#647493}
+.tab .ti{font-size:21px;display:block}
+.tab .tl{font-size:10px;font-weight:800;letter-spacing:.06em}
+.tab.on{color:var(--accentText);background:#FFF4DC}
+
+/* ============ オーバーレイ共通 ============ */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(30,45,80,.5);display:none;align-items:center;justify-content:center;padding:calc(22px + var(--safeTop)) calc(22px + var(--safeRight)) calc(22px + var(--safeBottom)) calc(22px + var(--safeLeft));backdrop-filter:blur(3px);overscroll-behavior:contain}
+.overlay.show{display:flex}
+.sheet{background:#fff;border-radius:26px;box-shadow:0 24px 60px rgba(20,35,70,.35);width:min(380px,100%);max-height:86vh;max-height:86dvh;overflow-y:auto;padding:22px;animation:pop .28s cubic-bezier(.34,1.56,.64,1);overscroll-behavior:contain}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.sheet h2{font-size:18px;font-weight:800;margin-bottom:12px}
+.sheet .row{margin-bottom:16px}
+.sheet label.fl{display:block;font-size:12px;font-weight:800;color:var(--sub);letter-spacing:.08em;margin-bottom:7px}
+.txt{width:100%;border:2.5px solid var(--line);border-radius:14px;padding:12px 14px;font-family:inherit;font-size:15px;font-weight:700;color:var(--ink);outline:none}
+.txt:focus{border-color:var(--sun)}
+select.txt{background:#fff;height:50px}
+.btn{display:inline-block;border:0;border-radius:16px;padding:13px 18px;font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;transition:transform .12s}
+.btn:active{transform:scale(.95)}
+.btn:focus-visible,.iconbtn:focus-visible,.bigbtn:focus-visible,.tab:focus-visible,.cat:focus-visible,.tile:focus-visible,.tiplink:focus-visible{
+  outline:4px solid #1D70B8;outline-offset:3px
+}
+.btn.primary{background:linear-gradient(135deg,var(--sun),var(--sun2));color:var(--ink);width:100%;box-shadow:0 8px 18px rgba(255,150,40,.35)}
+.btn.ghost{background:#EFF4FA;color:var(--ink)}
+.btn.danger{background:#FFECEC;color:#A51D2D;width:100%}
+.btn.danger.armed{background:#A51D2D;color:#fff}
+.switchrow{display:flex;align-items:center;justify-content:space-between}
+.switch{position:relative;width:52px;height:30px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch i{position:absolute;inset:0;border-radius:99px;background:#D9E3F0;transition:.2s;cursor:pointer}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:.2s}
+.switch input:checked + i{background:var(--sun)}
+.switch input:checked + i::after{transform:translateX(22px)}
+.switch input:focus-visible + i{outline:4px solid #1D70B8;outline-offset:3px}
+.segmini{display:flex;gap:6px}
+.segmini button{flex:1;border:2.5px solid var(--line);background:#fff;border-radius:13px;padding:10px 0;font-family:inherit;font-size:13px;font-weight:800;color:var(--sub);cursor:pointer}
+.segmini button.on{border-color:var(--sun);color:var(--accentText);background:#FFF7E2}
+.dressprev{position:relative;width:150px;height:150px;margin:0 auto 10px}
+.dressprev .mascot{animation:none}
+.dressprev .mascot svg{width:150px;height:150px}
+.cattabs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:2px 2px 10px}
+.cat{border:0;background:var(--card);box-shadow:var(--shadow);border-radius:13px;padding:7px 11px;font-family:inherit;font-size:12px;font-weight:800;color:var(--sub);cursor:pointer;white-space:nowrap;line-height:1.25}
+.cat.on{background:linear-gradient(135deg,var(--sun),var(--sun2));color:var(--ink)}
+.cat.on::before{content:'✓ '}
+.cat small{display:block;font-size:9px;opacity:.85;font-weight:800}
+.tile{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:6px 4px 7px;text-align:center;position:relative;border:3px solid transparent;cursor:pointer;font-family:inherit;color:inherit;width:100%}
+.tile.on{border-color:var(--sun);background:#FFF7E2}
+.tile.on::after{content:'✓';position:absolute;top:3px;left:5px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:#fff;font-size:12px;font-weight:800}
+.tile svg{width:100%;height:auto;display:block}
+.tile .t-name{font-size:9.5px;font-weight:800;margin-top:3px;line-height:1.3}
+.tile.lock{cursor:default}
+.tile.lock svg{opacity:.22;filter:grayscale(1)}
+.tile.lock .t-name{color:#647493}
+.tile .t-lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px}
+.tile .t-num{position:absolute;top:-6px;right:-4px;background:var(--ink);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:2px 6px}
+.tile .t-star{font-size:9px;letter-spacing:.06em}
+.zsec{margin-bottom:16px}
+.zhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 7px;font-size:13px;font-weight:800}
+.zhead span{font-size:11px;color:var(--sub)}
+.g-wearbtn{margin-top:8px}
+.modal-status{display:none;margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#EEF5FC;color:#24496B;font-size:12px;font-weight:800;line-height:1.55;text-align:left}
+.modal-status.show{display:block}
+.modal-status.error{background:#FFF0F0;color:#8F1D2C}
+
+/* ============ ガチャ ============ */
+#gacha .sheet{text-align:center;overflow:hidden;position:relative}
+.g-capsule{font-size:88px;animation:capsule .9s cubic-bezier(.34,1.56,.64,1) infinite}
+@keyframes capsule{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-22px) rotate(-10deg)}60%{transform:translateY(0) rotate(8deg)}}
+.g-stage2{display:none}
+.g-item{font-size:92px;animation:reveal .55s cubic-bezier(.34,1.7,.64,1)}
+@keyframes reveal{from{transform:scale(.2) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+.g-badge{display:inline-block;background:#B62F3C;color:#fff;font-size:11px;font-weight:800;letter-spacing:.12em;padding:4px 12px;border-radius:99px;margin-bottom:8px}
+.g-bonusbadge{background:linear-gradient(135deg,#FFC53D,#FF8A3D);color:var(--ink)}
+.g-name{font-size:21px;font-weight:800;margin-top:6px}
+.g-stars{font-size:15px;letter-spacing:.15em;margin-top:2px}
+.g-sub{font-size:12px;color:var(--sub);margin:8px 0 16px;line-height:1.7}
+.confetti{position:absolute;top:-12px;width:9px;height:14px;border-radius:3px;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(560px) rotate(720deg);opacity:.15}}
+
+/* トースト・バナー */
+#toast{position:fixed;left:50%;bottom:calc(var(--tabActualH) + 26px);transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;font-size:13.5px;font-weight:800;padding:12px 20px;border-radius:99px;box-shadow:0 10px 26px rgba(20,35,70,.4);opacity:0;transition:opacity .3s;pointer-events:none;max-width:calc(88vw - var(--safeLeft) - var(--safeRight));text-align:center}
+#toast.show{opacity:1}
+#banner{position:fixed;top:0;left:0;right:0;z-index:70;background:#FFEDD4;color:#71440A;font-size:12px;font-weight:800;padding:calc(10px + var(--safeTop)) calc(40px + var(--safeRight)) 10px calc(14px + var(--safeLeft));display:none;line-height:1.5}
+#banner.show{display:block}
+#banner button{position:absolute;right:calc(6px + var(--safeRight));top:calc(4px + var(--safeTop));width:32px;height:32px;display:grid;place-items:center;border:0;background:none;font-size:20px;cursor:pointer;color:#71440A}
+
+@media (prefers-reduced-motion: reduce){
+  .cloud,.mascot,.mascot .ns-rays,.sheet,.g-capsule,.g-item,.confetti,.view.active{animation:none !important}
+  body.mode-due .bigbtn{animation:none}
+  *{transition-duration:.01ms !important}
+}
+@media (max-height:620px){
+  #onboard{padding:12px}
+  #onboard .sheet{max-height:94vh;max-height:94dvh;padding:14px}
+  #onboard .sheet>.center:first-child{font-size:36px !important}
+  #onboard .sheet h2{margin-bottom:6px}
+  #onboard .sheet p{line-height:1.55 !important;margin-bottom:8px !important}
+}
+</style>
+</head>
+<body>
+<div class="cloud c1"></div>
+<div class="cloud c2"></div>
+
+<div id="banner" role="alert"><span id="bannerText"></span><button type="button" aria-label="おしらせをとじる" onclick="document.getElementById('banner').classList.remove('show')">×</button></div>
+
+<div id="app">
+  <header class="top">
+    <div class="logo">☀️ ぬりサン!<small>ぬりわすれゼロで<ruby>光老化<rt>ひかりろうか</rt></ruby>をふせごう</small></div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="iconbtn" id="gearBtn" aria-label="せってい">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ============ ホーム ============ -->
+  <section class="view active" id="view-home">
+    <div class="hero">
+      <div class="ringwrap">
+        <svg viewBox="0 0 216 216" aria-hidden="true">
+          <circle class="ring-bg" cx="108" cy="108" r="94"></circle>
+          <circle class="ring-fg" id="ringFg" cx="108" cy="108" r="94"></circle>
+        </svg>
+        <div class="mascot" id="mascot" role="img" aria-label="ぬりサンのキャラクター"></div>
+      </div>
+      <div class="status-title" id="stTitle" aria-live="polite"></div>
+      <div class="countdown" id="countdown"></div>
+      <div class="status-sub" id="stSub"></div>
+      <button type="button" class="bigbtn" id="nuttaBtn">☀️ ぬった!</button>
+    </div>
+
+    <div class="chips">
+      <div class="chip">きょう <b id="chipToday">0</b> 回</div>
+      <div class="chip">🔥 <b id="chipStreak">0</b> 日れんぞく</div>
+      <div class="chip"><span class="coin">光</span> <b id="chipCoin">0</b> まい</div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">きょうのUV(しがいせん)<span class="uvbadge" id="uvBadge">ちいきべつ</span></div>
+      <div class="uvrow"><span class="uvval" id="uvVal">-</span><span style="font-size:12px;font-weight:800" id="uvCat"></span></div>
+      <div class="uvbar"><i class="uvmark" id="uvMark"></i></div>
+      <div class="uvadvice" id="uvAdvice"></div>
+      <div class="disclaimer" id="uvNote"></div>
+      <div class="disclaimer credit">
+        いまいるばしょのUVよそうデータ:<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>(<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)<br>
+        ※小数1けたにまるめ、強さのなまえをつけています。気しょうモデルのよそうで、きかいではかった数字ではありません。<br>
+        ちいきべつのめやす:<a href="https://www.data.jma.go.jp/env/uvhp/info_uv.html" target="_blank" rel="noopener">気しょうちょうのしがいせんデータ</a>をもとに、きせつと時間のかわり方をかんたんにしたものです。
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">サンケアのワンポイント</div>
+      <div class="tip"><span class="t-emoji" id="tipEmoji">💡</span><p id="tipText"></p></div>
+      <button type="button" class="tiplink" id="tipNext">つぎのヒント →</button>
+    </div>
+  </section>
+
+  <!-- ============ きせかえ ============ -->
+  <section class="view" id="view-dress">
+    <div class="card">
+      <div class="eyebrow">きせかえ</div>
+      <div class="dressprev"><div id="dressPreview" class="mascot m-active" aria-hidden="true"></div></div>
+      <div class="coinbar" id="coinBar"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button type="button" class="btn ghost" id="dressRandom">🎲 おまかせ</button>
+        <button type="button" class="btn ghost" id="dressReset">↺ もどす</button>
+      </div>
+    </div>
+    <p class="note center" style="margin:-4px 0 10px">🔒のパーツはコインでこうかんできるよ(2回タップ)</p>
+    <div class="cattabs" id="catTabs" role="group" aria-label="パーツのしゅるい"></div>
+    <div class="grid" id="dressGrid"></div>
+  </section>
+
+  <!-- ============ ずかん ============ -->
+  <section class="view" id="view-zukan">
+    <div class="card">
+      <div class="eyebrow">パーツずかん</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <b id="colCount" style="font-size:20px">0 / 0</b>
+        <span id="colMsg" style="font-size:12px;font-weight:800;color:var(--sub)"></span>
+      </div>
+      <div class="progress"><i id="colBar" style="width:0%"></i></div>
+      <div class="note">「ぬった!」をおすとコインがもらえて、「きせかえ」でパーツとこうかんできるよ。★4は毎日つづけたごほうび!</div>
+    </div>
+    <div id="zukanBody"></div>
+  </section>
+
+  <!-- ============ きろく ============ -->
+  <section class="view" id="view-log">
+    <div class="stats">
+      <div class="stat"><div class="v"><span id="sStreak">0</span><small> 日</small></div><div class="l">れんぞく</div></div>
+      <div class="stat"><div class="v"><span id="sBest">0</span><small> 日</small></div><div class="l">さいこうきろく</div></div>
+      <div class="stat"><div class="v"><span id="sMonth">0</span><small> 回</small></div><div class="l">こんげつ</div></div>
+      <div class="stat"><div class="v"><span id="sTotal">0</span><small> 回</small></div><div class="l">るいけい</div></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">この2週間</div>
+      <div id="dayList"></div>
+    </div>
+  </section>
+</div>
+
+<!-- タブバー -->
+<nav class="tabbar" aria-label="メインメニュー"><div class="tabinner">
+  <button type="button" class="tab on" data-v="home" aria-current="page"><span class="ti">☀️</span><span class="tl">ホーム</span></button>
+  <button type="button" class="tab" data-v="dress"><span class="ti">🎨</span><span class="tl">きせかえ</span></button>
+  <button type="button" class="tab" data-v="zukan"><span class="ti">📖</span><span class="tl">ずかん</span></button>
+  <button type="button" class="tab" data-v="log"><span class="ti">📅</span><span class="tl">きろく</span></button>
+</div></nav>
+
+<!-- はじめまして -->
+<div class="overlay" id="onboard" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
+  <div class="sheet" tabindex="-1">
+    <div class="center" style="font-size:56px">☀️</div>
+    <h2 class="center" id="onboardTitle">ぬりサン!へようこそ</h2>
+    <p class="note center" style="margin-bottom:12px;font-size:12.5px"><b>ぬりサンの顔は、まだからっぽ。</b><br>日やけ止めをぬって、顔をつくってあげよう!</p>
+    <p class="note" style="margin-bottom:14px">
+      ①🧴 日やけ止めをぬったら「ぬった!」をタップ<br>
+      ②🎁 はじめの3かいはパーツ、4かいめからは<b>光老化よぼうコイン</b>がもらえる<br>
+      ③⏰ 2〜3時間たつと「ぬりなおして!」とおしらせ<br>
+      ④📖 あつめたパーツは「きせかえ」でチェンジできる<br>
+      <br>
+      🔔 おしらせは<b>このがめんをひらいているあいだ</b>だけ鳴るよ(夜18時〜朝6時はおやすみ)<br>
+      🔒 きろくはこのたんまつの中だけにほぞんされるよ<br>
+      📍 「はじめる!」のあと、いばしょをきょかすると、およそ1kmにまるめたいばしょを、UVをしらべるためOpen-Meteo(そとのサービス)へおくるよ<br>
+      <span id="onboardPrivacy">Open-Meteoでは、トラブルたいおうのため、IPアドレスやいばしょをふくむつうしんのきろくがのこることがあり、90日後にけされます。<a id="onboardPrivacyLink" href="https://open-meteo.com/en/terms" target="_blank" rel="noopener">Open-Meteoのきまり</a></span>
+    </p>
+    <button type="button" class="btn primary" id="obStart">はじめる!</button>
+    <div class="modal-status" id="onboardStatus" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- せってい -->
+<div class="overlay" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="sheet" tabindex="-1">
+    <h2 id="settingsTitle">⚙️ せってい</h2>
+    <div class="row">
+      <label class="fl" for="regionSel">すんでいるところ(UVのよそうにつかうよ)</label>
+      <select class="txt" id="regionSel">
+        <option value="hokkaido">北海道</option>
+        <option value="tohoku">東北</option>
+        <option value="kanto">かんとう</option>
+        <option value="chubu">ちゅうぶ</option>
+        <option value="kinki">きんき</option>
+        <option value="chugoku">ちゅうごく・しこく</option>
+        <option value="kyushu">きゅうしゅう</option>
+        <option value="okinawa">おきなわ・あまみ</option>
+      </select>
+      <p class="disclaimer" id="settingsPrivacy" style="margin-top:8px">いまいるばしょのUVよそうのため、いばしょを小数2けた(およそ1km)にまるめてOpen-Meteoへおくります。このアプリには、くわしいいばしょをほぞんしません。Open-Meteoでは、トラブルたいおうのため、IPアドレスやいばしょをふくむつうしんのきろくがのこることがあり、90日後にけされます。<a id="settingsPrivacyLink" href="https://open-meteo.com/en/terms" target="_blank" rel="noopener">Open-Meteoのきまり</a></p>
+    </div>
+    <div class="row">
+      <label class="fl">ぬりなおしのかんかく</label>
+      <div class="segmini" id="intervalSeg" role="group" aria-label="ぬりなおしのかんかく">
+        <button type="button" data-min="120" aria-pressed="false">2時間</button>
+        <button type="button" data-min="150" aria-pressed="false">2.5時間</button>
+        <button type="button" data-min="180" aria-pressed="false">3時間</button>
+      </div>
+    </div>
+    <div class="row switchrow">
+      <label class="fl" for="soundSw" style="margin:0">おしらせサウンド</label>
+      <label class="switch"><input type="checkbox" id="soundSw"><i></i></label>
+    </div>
+    <div class="row">
+      <button type="button" class="btn danger" id="resetBtn">データをぜんぶけす</button>
+    </div>
+    <div class="modal-status" id="settingsStatus" role="status" aria-live="polite"></div>
+    <button type="button" class="btn primary" id="setClose">とじる</button>
+  </div>
+</div>
+
+<!-- ガチャ -->
+<div class="overlay" id="gacha" role="dialog" aria-modal="true" aria-labelledby="gachaTitle">
+  <div class="sheet" id="gachaSheet" tabindex="-1">
+    <h2 class="sr-only" id="gachaTitle">ごほうび</h2>
+    <div class="g-stage1" id="gStage1">
+      <div class="g-capsule">🎁</div>
+      <p style="font-weight:800;margin-top:10px">なにが もらえるかな …!</p>
+    </div>
+    <div class="g-stage2" id="gStage2" aria-live="polite">
+      <div><span class="g-badge" id="gBadge">NEW!</span></div>
+      <div class="g-item" id="gEmoji">☀️</div>
+      <div class="g-name" id="gName"></div>
+      <div class="g-stars" id="gStars"></div>
+      <p class="g-sub" id="gSub"></p>
+      <button type="button" class="btn primary g-wearbtn" id="gWear">そのまま つける</button>
+      <button type="button" class="btn ghost g-wearbtn" id="gNext" style="width:100%">やったー!</button>
+      <div class="modal-status" id="gachaStatus" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="./region-data.js"></script>
+<script>
+'use strict';
+/* ================= パーツ(ここに1行足すだけで増える) ================= */
+const CATS = [
+  { id:'base',    n:'キャラ' },   { id:'bg',      n:'はいけい' },
+  { id:'ray',     n:'ひかり' },   { id:'wear',    n:'ふく' },
+  { id:'cheek',   n:'ほっぺ' },   { id:'eye',     n:'め' },
+  { id:'mouth',   n:'くち' },     { id:'glasses', n:'メガネ' },
+  { id:'neck',    n:'くび' },     { id:'hat',     n:'ぼうし' },
+  { id:'hand',    n:'もちもの' }, { id:'fx',      n:'エフェクト' },
+];
+// 描画順(うしろ → まえ)。この順番は固定
+const DRAW = ['bg','ray','base','wear','cheek','eye','mouth','glasses','neck','hat','hand','fx'];
+
+const RAYS8 = (sh, col) => '<g class="ns-rays">' +
+  [0,45,90,135,180,225,270,315].map(a =>
+    sh.replace('@', 'transform="rotate(' + a + ' 60 60)" fill="' + col + '"')).join('') + '</g>';
+
+const PARTS = [
+  /* ---- キャラ本体(d=ひるの色, n=よるの色, headTop=あたまのてっぺん) ---- */
+  { id:'base-sun', cat:'base', n:'ぬりサン', r:1, headTop:22, d:['#FFB300','#FFE9A0'], n2:['#FFD98F','#FFF4D8'],
+    svg:'<circle cx="60" cy="60" r="38" fill="var(--b1)"/><circle cx="49" cy="47" r="13" fill="var(--b2)" opacity=".5"/>' },
+  { id:'base-drop', cat:'base', n:'しずくちゃん', r:1, headTop:14, d:['#7FC9FF','#E3F4FF'], n2:['#9FC4E0','#D6E8F5'],
+    svg:'<path d="M60 12 C80 40 88 54 88 66 A28 28 0 0 1 32 66 C32 54 40 40 60 12 Z" fill="var(--b1)"/><ellipse cx="47" cy="50" rx="8" ry="12" fill="var(--b2)" opacity=".55" transform="rotate(-20 47 50)"/>' },
+  { id:'base-cloud', cat:'base', n:'くもりん', r:1, headTop:26, d:['#F2F7FD','#FFFFFF'], n2:['#D8DFEE','#EDF1F8'],
+    svg:'<g fill="var(--b1)"><circle cx="41" cy="62" r="20"/><circle cx="62" cy="50" r="24"/><circle cx="83" cy="63" r="17"/><rect x="35" y="60" width="54" height="20" rx="10"/></g><circle cx="54" cy="43" r="8" fill="var(--b2)" opacity=".8"/>' },
+  { id:'base-sunflower', cat:'base', n:'ひまわりん', r:2, headTop:12, d:['#E0A868','#FFC53D'], n2:['#C8A47E','#E8CB8F'],
+    svg:RAYS8('<ellipse cx="60" cy="26" rx="9" ry="15" @/>', 'var(--b2)').replace('ns-rays','') + '<circle cx="60" cy="60" r="30" fill="var(--b1)"/>' },
+  { id:'base-dolphin', cat:'base', n:'イルカプリンス', r:3, headTop:18,
+    d:['#A8D4F5','#E6F4FF'], n2:['#93AEC9','#D6E4F0'],
+    svg:'<g stroke="#5F5560" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">'
+      + '<path d="M53 18 C49 5 62 0 70 6 C64 10 58 13 57 20 Z" fill="var(--b1)"/>'
+      + '<path d="M27 62 C14 59 7 70 15 79 C23 83 30 77 32 70 Z" fill="var(--b1)"/>'
+      + '<path d="M93 62 C106 59 113 70 105 79 C97 83 90 77 88 70 Z" fill="var(--b1)"/>'
+      + '<path d="M60 15 C81 15 95 33 95 55 C95 78 80 93 60 93 C40 93 25 78 25 55 C25 33 39 15 60 15 Z" fill="var(--b1)"/>'
+      + '<path d="M48 73 Q60 68 72 73 L69 89 Q60 96 51 89 Z" fill="var(--b2)"/>'
+      + '</g>' },
+  { id:'base-dolphin-p', cat:'base', n:'イルカプリンセス', r:3, headTop:18,
+    d:['#FBC9DD','#FDE9F1'], n2:['#CFA8B8','#EDD8E1'],
+    svg:'<g stroke="#5F5560" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">'
+      + '<path d="M53 18 C49 5 62 0 70 6 C64 10 58 13 57 20 Z" fill="var(--b1)"/>'
+      + '<path d="M27 62 C14 59 7 70 15 79 C23 83 30 77 32 70 Z" fill="var(--b1)"/>'
+      + '<path d="M93 62 C106 59 113 70 105 79 C97 83 90 77 88 70 Z" fill="var(--b1)"/>'
+      + '<path d="M60 15 C81 15 95 33 95 55 C95 78 80 93 60 93 C40 93 25 78 25 55 C25 33 39 15 60 15 Z" fill="var(--b1)"/>'
+      + '<path d="M48 73 Q60 68 72 73 L69 89 Q60 96 51 89 Z" fill="var(--b2)"/>'
+      + '</g>' },
+
+  /* ---- はいけい ---- */
+  { id:'bg-sky', cat:'bg', n:'あおぞら', r:1, svg:'<rect width="120" height="120" rx="26" fill="#BFE7FF"/><circle cx="97" cy="24" r="10" fill="#FFF3C9"/>' },
+  { id:'bg-sea', cat:'bg', n:'うみ', r:1, svg:'<rect width="120" height="120" rx="26" fill="#9FE0F5"/><path d="M0 88 Q30 80 60 88 T120 88 L120 120 L0 120 Z" fill="#4FB8DE"/>' },
+  { id:'bg-night', cat:'bg', n:'よぞら', r:2, svg:'<rect width="120" height="120" rx="26" fill="#3A4477"/><circle cx="96" cy="22" r="9" fill="#FFF0B0"/><circle cx="26" cy="30" r="2" fill="#FFF"/><circle cx="45" cy="15" r="1.6" fill="#FFF"/><circle cx="104" cy="62" r="1.8" fill="#FFF"/><circle cx="18" cy="76" r="1.6" fill="#FFF"/>' },
+  { id:'bg-hana', cat:'bg', n:'おはなばたけ', r:2, svg:'<rect width="120" height="120" rx="26" fill="#FFE7EF"/><g fill="#FFC0D4"><circle cx="19" cy="22" r="7"/><circle cx="101" cy="33" r="6"/><circle cx="33" cy="97" r="6"/><circle cx="93" cy="99" r="7"/></g>' },
+
+  /* ---- ひかり ---- */
+  { id:'ray-togari', cat:'ray', n:'とがりびかり', r:1, svg:RAYS8('<rect x="57" y="3" width="6" height="16" rx="3" @/>', '#FFC53D') },
+  { id:'ray-maru', cat:'ray', n:'まるびかり', r:1, svg:RAYS8('<circle cx="60" cy="11" r="7" @/>', '#FFD166') },
+  { id:'ray-kira', cat:'ray', n:'きらきら', r:2, svg:RAYS8('<path d="M60 0 L63 9 L72 12 L63 15 L60 24 L57 15 L48 12 L57 9 Z" @/>', '#FFE08A') },
+
+  /* ---- ふく(体をおおう) ---- */
+  { id:'wear-rash', cat:'wear', n:'ラッシュガード', r:1, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M23 77 Q15 84 17 97 L29 99 L33 82 Z" fill="#3E7FBF"/><path d="M97 77 Q105 84 103 97 L91 99 L87 82 Z" fill="#3E7FBF"/><path d="M31 75 Q60 88 89 75 L91 101 Q60 111 29 101 Z" fill="#4C8FD4"/></g><path d="M32 85 Q60 97 88 85" fill="none" stroke="#EAF3FB" stroke-width="3.4" stroke-linecap="round"/>' },
+  { id:'wear-rash-p', cat:'wear', n:'ラッシュガード(ピンク)', r:1, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M23 77 Q15 84 17 97 L29 99 L33 82 Z" fill="#E4739E"/><path d="M97 77 Q105 84 103 97 L91 99 L87 82 Z" fill="#E4739E"/><path d="M31 75 Q60 88 89 75 L91 101 Q60 111 29 101 Z" fill="#F58BB4"/></g><path d="M32 85 Q60 97 88 85" fill="none" stroke="#FFEDF4" stroke-width="3.4" stroke-linecap="round"/>' },
+  { id:'wear-tshirt', cat:'wear', n:'Tシャツ', r:1, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M27 77 L18 88 L29 95 L35 84 Z" fill="#FFC94D"/><path d="M93 77 L102 88 L91 95 L85 84 Z" fill="#FFC94D"/><path d="M33 75 Q60 88 87 75 L89 102 Q60 112 31 102 Z" fill="#FFE08A"/></g><circle cx="60" cy="94" r="5" fill="#FFC94D" stroke="#4A4550" stroke-width="1.4"/>' },
+  { id:'wear-parka', cat:'wear', n:'UVパーカー', r:2, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M22 76 Q13 84 15 98 L28 100 L33 81 Z" fill="#7FB89E"/><path d="M98 76 Q107 84 105 98 L92 100 L87 81 Z" fill="#7FB89E"/><path d="M31 74 Q60 87 89 74 L91 102 Q60 112 29 102 Z" fill="#9BD1B8"/><path d="M40 74 Q60 84 80 74 Q74 66 60 66 Q46 66 40 74 Z" fill="#7FB89E"/></g><path d="M60 84 L60 106" stroke="#4A4550" stroke-width="1.6"/><circle cx="60" cy="83" r="2.4" fill="#4A4550"/>' },
+  { id:'wear-armcover', cat:'wear', n:'アームカバー', r:1, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M23 71 Q12 80 14 97 L28 100 L32 75 Z" fill="#EDE5F5"/><path d="M97 71 Q108 80 106 97 L92 100 L88 75 Z" fill="#EDE5F5"/></g><g stroke="#B79ECB" stroke-width="3.2" stroke-linecap="round"><path d="M16 90 L27 92"/><path d="M104 90 L93 92"/></g>' },
+  { id:'wear-mizugi', cat:'wear', n:'水着', r:1, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M45 66 L40 82 L48 84 L52 68 Z" fill="#5AC8E0"/><path d="M75 66 L80 82 L72 84 L68 68 Z" fill="#5AC8E0"/><path d="M36 79 Q60 91 84 79 L86 101 Q60 111 34 101 Z" fill="#5AC8E0"/></g><g fill="#FFFFFF" opacity=".8"><circle cx="48" cy="90" r="3"/><circle cx="62" cy="94" r="3"/><circle cx="75" cy="89" r="3"/></g>' },
+  { id:'wear-shirt', cat:'wear', n:'長そでシャツ', r:2, svg:'<g stroke="#4A4550" stroke-width="1.8" stroke-linejoin="round"><path d="M22 77 Q13 85 15 98 L28 100 L33 82 Z" fill="#BFD9EE"/><path d="M98 77 Q107 85 105 98 L92 100 L87 82 Z" fill="#BFD9EE"/><path d="M31 75 Q60 88 89 75 L91 102 Q60 112 29 102 Z" fill="#E4F0FA"/><path d="M46 74 L60 86 L74 74 Q68 68 60 68 Q52 68 46 74 Z" fill="#BFD9EE"/></g><g fill="#4A4550"><circle cx="60" cy="92" r="2"/><circle cx="60" cy="101" r="2"/></g>' },
+
+  /* ---- ほっぺ ---- */
+  { id:'cheek-cream', cat:'cheek', n:'くりーむ', r:1, svg:'<ellipse cx="41" cy="66" rx="6" ry="4" fill="#FF9E80" opacity=".5"/><ellipse cx="79" cy="66" rx="6" ry="4" fill="#FF9E80" opacity=".5"/>' },
+  { id:'cheek-pink', cat:'cheek', n:'ぴんく', r:1, svg:'<ellipse cx="41" cy="66" rx="6.5" ry="4.5" fill="#FF7FA8" opacity=".45"/><ellipse cx="79" cy="66" rx="6.5" ry="4.5" fill="#FF7FA8" opacity=".45"/>' },
+
+  /* ---- め ---- */
+  { id:'eye-normal', cat:'eye', n:'まんまるめ', r:1, svg:'<circle cx="47" cy="54" r="4" fill="#2B3A55"/><circle cx="48.4" cy="52.6" r="1.4" fill="#FFF"/><circle cx="73" cy="54" r="4" fill="#2B3A55"/><circle cx="74.4" cy="52.6" r="1.4" fill="#FFF"/>' },
+  { id:'eye-niko', cat:'eye', n:'にこにこめ', r:1, svg:'<g fill="none" stroke="#2B3A55" stroke-width="3.6" stroke-linecap="round"><path d="M41 55 Q47 48 53 55"/><path d="M67 55 Q73 48 79 55"/></g>' },
+  { id:'eye-tare', cat:'eye', n:'たれめ', r:1, svg:'<g fill="#2B3A55"><ellipse cx="47" cy="55" rx="4" ry="4.6"/><ellipse cx="73" cy="55" rx="4" ry="4.6"/></g><g fill="none" stroke="#2B3A55" stroke-width="2.6" stroke-linecap="round"><path d="M41 50 Q47 47 52 51"/><path d="M68 51 Q73 47 79 50"/></g>' },
+  { id:'eye-wink', cat:'eye', n:'ウインク', r:2, svg:'<circle cx="47" cy="54" r="4" fill="#2B3A55"/><circle cx="48.4" cy="52.6" r="1.4" fill="#FFF"/><path d="M67 55 Q73 48 79 55" fill="none" stroke="#2B3A55" stroke-width="3.6" stroke-linecap="round"/>' },
+  { id:'eye-kira', cat:'eye', n:'キラキラめ', r:2, svg:'<g fill="#2B3A55"><path d="M47 48 L50 53 L55 54 L50 55 L47 60 L44 55 L39 54 L44 53 Z"/><path d="M73 48 L76 53 L81 54 L76 55 L73 60 L70 55 L65 54 L70 53 Z"/></g>' },
+  { id:'eye-uru', cat:'eye', n:'うるうるめ', r:3, svg:'<g fill="#2B3A55"><circle cx="47" cy="54" r="6"/><circle cx="73" cy="54" r="6"/></g><g fill="#FFF"><circle cx="49" cy="51.5" r="2.2"/><circle cx="75" cy="51.5" r="2.2"/><circle cx="45" cy="56.5" r="1.3"/><circle cx="71" cy="56.5" r="1.3"/></g>' },
+
+  /* ---- くち ---- */
+  { id:'mouth-smile', cat:'mouth', n:'にっこり', r:1, svg:'<path d="M52 67 Q60 75 68 67" fill="none" stroke="#2B3A55" stroke-width="3.6" stroke-linecap="round"/>' },
+  { id:'mouth-open', cat:'mouth', n:'あーん', r:1, svg:'<path d="M50 65 Q60 80 70 65 Z" fill="#8C4A2A"/><ellipse cx="60" cy="72" rx="5" ry="3" fill="#FF8A76"/>' },
+  { id:'mouth-nyan', cat:'mouth', n:'にゃんくち', r:1, svg:'<path d="M50 68 Q55 74 60 68 Q65 74 70 68" fill="none" stroke="#2B3A55" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id:'mouth-small', cat:'mouth', n:'ちいさなくち', r:2, svg:'<ellipse cx="60" cy="69" rx="4" ry="4.6" fill="#2B3A55"/>' },
+  { id:'mouth-tere', cat:'mouth', n:'てれくち', r:2, svg:'<path d="M51 69 Q55 65 60 69 Q65 73 69 68" fill="none" stroke="#2B3A55" stroke-width="3.2" stroke-linecap="round"/>' },
+
+  /* ---- メガネ ---- */
+  { id:'glasses-sun', cat:'glasses', n:'サングラス', r:2, svg:'<g fill="#2B3A55"><rect x="36" y="46" width="22" height="15" rx="7"/><rect x="62" y="46" width="22" height="15" rx="7"/><rect x="56" y="51" width="8" height="4" rx="2"/></g><path d="M40 49 L46 49" stroke="#FFF" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>' },
+  { id:'glasses-round', cat:'glasses', n:'まるめがね', r:1, svg:'<g fill="none" stroke="#5A6B8C" stroke-width="3"><circle cx="47" cy="54" r="10"/><circle cx="73" cy="54" r="10"/><path d="M57 54 L63 54"/></g>' },
+  { id:'glasses-sports', cat:'glasses', n:'スポーツサングラス', r:1, svg:'<g stroke="#4A4550" stroke-width="2" stroke-linejoin="round"><path d="M34 48 Q60 41 86 48 L84 59 Q60 68 36 59 Z" fill="#4C6EA8"/></g><path d="M40 51 Q46 49 52 50" fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" opacity=".55"/>' },
+  { id:'glasses-cat', cat:'glasses', n:'キャットアイ', r:2, svg:'<g fill="#7A5442" stroke="#4A3428" stroke-width="2" stroke-linejoin="round"><path d="M35 47 Q37 59 47 60 Q56 59 58 50 Q47 44 35 47 Z"/><path d="M85 47 Q83 59 73 60 Q64 59 62 50 Q73 44 85 47 Z"/></g><path d="M58 51 L62 51" stroke="#4A3428" stroke-width="2.4" stroke-linecap="round"/>' },
+  { id:'glasses-heart', cat:'glasses', n:'ハートサングラス', r:2, svg:'<g fill="#FF8FB4" stroke="#D2699A" stroke-width="1.8" stroke-linejoin="round"><path d="M47 49 C43 43 36 45 37 51 C38 57 44 59 47 63 C50 59 56 57 57 51 C58 45 51 43 47 49 Z"/><path d="M73 49 C69 43 62 45 63 51 C64 57 70 59 73 63 C76 59 82 57 83 51 C84 45 77 43 73 49 Z"/></g><path d="M58 52 L62 52" stroke="#D2699A" stroke-width="2.2" stroke-linecap="round"/>' },
+  { id:'hat-uvhat', cat:'hat', n:'つばひろぼうし', r:1, svg:'<ellipse cx="60" cy="31" rx="38" ry="10" fill="#EFE6D8" stroke="#C9B99E" stroke-width="1.8"/><path d="M42 31 Q44 9 60 9 Q76 9 78 31 Z" fill="#F7F0E4" stroke="#C9B99E" stroke-width="1.8"/><path d="M42 28 Q60 34 78 28" stroke="#A8C9E0" stroke-width="4" fill="none" stroke-linecap="round"/>' },
+
+  /* ---- くび ---- */
+  { id:'neck-ribbon', cat:'neck', n:'りぼん', r:1, svg:'<g fill="#FF6B6B"><path d="M60 89 L48 83 L48 95 Z"/><path d="M60 89 L72 83 L72 95 Z"/><circle cx="60" cy="89" r="4"/></g>' },
+  { id:'neck-scarf', cat:'neck', n:'マフラー', r:2, svg:'<path d="M38 86 Q60 96 82 86 L82 93 Q60 103 38 93 Z" fill="#7FC9A8"/><path d="M74 92 L80 106 L70 104 Z" fill="#69B896"/>' },
+  { id:'neck-stole', cat:'neck', n:'UVストール', r:1, svg:'<g stroke="#4A4550" stroke-width="1.6" stroke-linejoin="round"><path d="M34 83 Q60 95 86 83 L86 91 Q60 103 34 91 Z" fill="#DCC9EC"/><path d="M76 90 L83 106 L70 104 Z" fill="#CBB4E0"/></g><g stroke="#B79ECB" stroke-width="1.6" stroke-linecap="round"><path d="M71 105 L70 110"/><path d="M76 106 L76 111"/><path d="M81 106 L83 110"/></g>' },
+  { id:'neck-bronze', cat:'neck', n:'ブロンズメダル', r:4, bonus:3, svg:'<path d="M52 82 L60 92 L68 82" fill="none" stroke="#9AA8C2" stroke-width="4"/><circle cx="60" cy="97" r="9" fill="#CD7F32" stroke="#A8642A" stroke-width="2"/><text x="60" y="101" font-size="9" font-weight="800" fill="#FFF" text-anchor="middle">3</text>' },
+  { id:'neck-silver', cat:'neck', n:'シルバーメダル', r:4, bonus:7, svg:'<path d="M52 82 L60 92 L68 82" fill="none" stroke="#9AA8C2" stroke-width="4"/><circle cx="60" cy="97" r="9" fill="#C0C6CF" stroke="#9AA1AC" stroke-width="2"/><text x="60" y="101" font-size="9" font-weight="800" fill="#FFF" text-anchor="middle">7</text>' },
+  { id:'neck-gold', cat:'neck', n:'ゴールドメダル', r:4, bonus:30, svg:'<path d="M52 82 L60 92 L68 82" fill="none" stroke="#9AA8C2" stroke-width="4"/><circle cx="60" cy="97" r="9" fill="#FFC53D" stroke="#E0A200" stroke-width="2"/><text x="60" y="101" font-size="8" font-weight="800" fill="#FFF" text-anchor="middle">30</text>' },
+
+  /* ---- ぼうし(headTopに合わせて自動でずれる) ---- */
+  { id:'hat-straw', cat:'hat', n:'むぎわらぼうし', r:1, svg:'<ellipse cx="60" cy="30" rx="34" ry="9" fill="#E8C87A"/><path d="M43 30 Q45 10 60 10 Q75 10 77 30 Z" fill="#F0D28C"/><path d="M43 27 Q60 33 77 27" stroke="#D9A94E" stroke-width="4" fill="none"/>' },
+  { id:'hat-cap', cat:'hat', n:'キャップ', r:1, svg:'<path d="M38 28 Q40 8 60 8 Q80 8 82 28 Z" fill="#6EC6FF"/><path d="M78 24 Q98 26 96 33 L78 31 Z" fill="#4FA8E8"/><circle cx="60" cy="9" r="4" fill="#FFF"/>' },
+  { id:'hat-leaf', cat:'hat', n:'ふたば', r:1, svg:'<path d="M60 26 Q60 12 60 8" stroke="#4CAF50" stroke-width="3" fill="none"/><path d="M60 16 C48 12 46 4 58 6 C64 7 64 14 60 16 Z" fill="#66BB6A"/><path d="M60 20 C72 16 74 8 62 10 C56 11 56 18 60 20 Z" fill="#81C784"/>' },
+  { id:'hat-ribbon', cat:'hat', n:'あたまリボン', r:2, svg:'<g fill="#FF8FB4"><path d="M60 22 L44 12 L46 28 Z"/><path d="M60 22 L76 12 L74 28 Z"/><circle cx="60" cy="22" r="5"/></g>' },
+  { id:'hat-flower', cat:'hat', n:'おはなかざり', r:2, svg:'<g fill="#FF7FA8"><circle cx="48" cy="20" r="5"/><circle cx="58" cy="15" r="5"/><circle cx="68" cy="20" r="5"/><circle cx="58" cy="25" r="5"/></g><circle cx="58" cy="20" r="4" fill="#FFE08A"/>' },
+  { id:'hat-hibiscus', cat:'hat', n:'よこおおばな', r:2, svg:'<g stroke="#D2699A" stroke-width="1.6"><g fill="#FF8FC0"><ellipse cx="33" cy="25" rx="6.5" ry="7.5"/><ellipse cx="43" cy="21" rx="6.5" ry="7.5"/><ellipse cx="47" cy="31" rx="6.5" ry="7.5"/><ellipse cx="37" cy="35" rx="6.5" ry="7.5"/></g><circle cx="40" cy="28" r="4.8" fill="#FFE9A0"/></g>' },
+  { id:'hat-crown', cat:'hat', n:'おうかん', r:4, bonus:100, svg:'<path d="M38 28 L38 10 L48 18 L60 6 L72 18 L82 10 L82 28 Z" fill="#FFC53D" stroke="#E0A200" stroke-width="2"/><circle cx="60" cy="14" r="3" fill="#FF6B6B"/>' },
+
+  /* ---- もちもの ---- */
+  { id:'hand-sunscreen', cat:'hand', n:'ひやけどめ', r:1, svg:'<g stroke="#5F5560" stroke-width="1.8" stroke-linejoin="round"><path d="M92 56 Q92 45 100 45 Q108 45 108 56 L108 68 L92 68 Z" fill="#B79ECB"/><path d="M90 68 L110 68 Q113 68 113 72 L113 92 Q113 98 107 98 L93 98 Q87 98 87 92 L87 72 Q87 68 90 68 Z" fill="#F9F2F6"/></g><g fill="#6E6374" text-anchor="middle" font-weight="700"><text x="100" y="82" font-size="6.4">ひやけ</text><text x="100" y="90" font-size="6.4">止め</text></g><path d="M91 73 L91 92" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>' },
+  { id:'hand-parasol', cat:'hand', n:'ひがさ', r:1, svg:'<path d="M78 58 A20 20 0 0 1 118 58 Z" fill="#FF8FB4"/><path d="M98 58 L98 92" stroke="#8C6E52" stroke-width="3"/><path d="M98 92 Q104 94 102 88" fill="none" stroke="#8C6E52" stroke-width="3"/>' },
+  { id:'hand-ice', cat:'hand', n:'ソフトクリーム', r:2, svg:'<path d="M92 74 L104 74 L98 96 Z" fill="#E8B87A"/><circle cx="98" cy="66" r="10" fill="#FFF4E0"/><circle cx="93" cy="70" r="7" fill="#FFF9EE"/><circle cx="103" cy="70" r="7" fill="#FFF9EE"/>' },
+  { id:'hand-uki', cat:'hand', n:'うきわ', r:2, svg:'<circle cx="98" cy="80" r="16" fill="#FF6B6B"/><circle cx="98" cy="80" r="7" fill="#FFF"/><path d="M86 70 A16 16 0 0 1 98 64 L98 73 A7 7 0 0 0 92 76 Z" fill="#FFF"/>' },
+
+  /* ---- エフェクト ---- */
+  { id:'fx-kira', cat:'fx', n:'キラキラ', r:1, svg:'<g fill="#FFF0B0"><path d="M100 22 L102 28 L108 30 L102 32 L100 38 L98 32 L92 30 L98 28 Z"/><path d="M19 40 L20.5 44 L24 45.5 L20.5 47 L19 51 L17.5 47 L14 45.5 L17.5 44 Z"/><path d="M104 88 L105 91 L108 92 L105 93 L104 96 L103 93 L100 92 L103 91 Z"/></g>' },
+  { id:'fx-breeze', cat:'fx', n:'そよかぜ', r:1, svg:'<g fill="none" stroke="#8FDDB4" stroke-width="3" stroke-linecap="round"><path d="M12 44 Q26 38 20 52"/><path d="M100 46 Q112 40 106 54"/></g>' },
+];
+
+/* ---- 差し替えできない組み込みパーツ ---- */
+const CLOSED_EYE = '<g fill="none" stroke="#2B3A55" stroke-width="3.6" stroke-linecap="round"><path d="M41 54 Q47 60 53 54"/><path d="M67 54 Q73 60 79 54"/></g>';
+const NIGHTCAP = '<g><path d="M40 29 Q54 6 86 14 L79 27 Q58 33 42 31 Z" fill="#7C8BD9"/><path d="M42 31 Q60 35 79 27" fill="none" stroke="#93A0E6" stroke-width="4" stroke-linecap="round"/><circle cx="88" cy="13" r="5.5" fill="#FFF"/></g>';
+const ZZZ = '<g fill="#8FA3D8" font-family="sans-serif" font-weight="800"><text x="88" y="34" font-size="16" transform="rotate(-12 88 34)">z</text><text x="100" y="22" font-size="11" transform="rotate(-12 100 22)">z</text></g>';
+const SWEAT = '<path d="M92 36 C98 45 98 52 92 52 C86 52 86 45 92 36 Z" fill="#6EC6FF"/>';
+
+const DEFAULT_OWN = ['base-sun'];
+// 光老化よぼうコインのねだん(レア度べつ)。★4は達成のごほうび専用なので買えない
+const PRICE = { 1:1, 2:3, 3:6 };
+// ためたコインの「るいけい」でパーツが少しずつ出てくる(かいほう)
+const UNLOCK_SIZE = 6;    // 6こずつ
+const UNLOCK_STEP = 8;    // るいけい8まいごとに
+const COIN_SVG = '<svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="46" fill="#E8A200"/><circle cx="60" cy="56" r="42" fill="#FFC53D"/><circle cx="60" cy="56" r="33" fill="#FFDE8A"/><text x="60" y="70" font-size="34" font-weight="800" fill="#B57A00" text-anchor="middle">光</text></svg>';   // さいしょは本体だけ(顔はからっぽ)
+// はじめの3回は、もらえるパーツを固定する(顔ができていく体験のため)
+const FIRST_REWARDS = ['eye-normal','mouth-smile','ray-togari'];
+// 顔まわりのパーツ(キャラが face を持つ場合、まとめて位置・大きさを合わせる)
+const FACE_CATS = ['cheek','eye','mouth','glasses','hat'];
+function faceWrap(b, inner){
+  const f = b.face;
+  if (!f || !inner) return inner;
+  return '<g transform="translate(' + (60 + f.x) + ',' + (60 + f.y) + ') scale(' + f.s + ') translate(-60,-60)">'
+    + inner + '</g>';
+}
+const partById = id => PARTS.find(p => p.id === id) || null;
+
+// かいほうのじゅんばん:レア度がひくい順、カテゴリをかわりばんこに
+const UNLOCK_AT = (() => {
+  const order = [];
+  [1,2,3].forEach(r => {
+    const byCat = {};
+    PARTS.filter(p => p.r === r).forEach(p => { (byCat[p.cat] = byCat[p.cat] || []).push(p); });
+    let more = true;
+    while (more){
+      more = false;
+      CATS.forEach(c => { const a = byCat[c.id]; if (a && a.length){ order.push(a.shift()); more = true; } });
+    }
+  });
+  const map = {};
+  order.forEach((p, i) => { map[p.id] = Math.floor(i / UNLOCK_SIZE) * UNLOCK_STEP; });
+  PARTS.filter(p => p.r === 4).forEach(p => { map[p.id] = 0; });   // ごほうびは対象外
+  ['base-sun'].concat(FIRST_REWARDS).forEach(id => { map[id] = 0; });
+  return map;
+})();
+const isUnlocked = p => !!(S.parts && S.parts[p.id]) || (S.coinsTotal || 0) >= (UNLOCK_AT[p.id] || 0);
+// つぎのかいほうまで あと何まい?
+function nextUnlock(){
+  const t = S.coinsTotal || 0;
+  const locked = PARTS.filter(p => !isUnlocked(p));
+  const ns = locked.map(p => UNLOCK_AT[p.id] || 0).filter(v => v > t);
+  if (!ns.length) return null;
+  const at = Math.min.apply(null, ns);
+  return { at, left: at - t, count: locked.filter(p => UNLOCK_AT[p.id] === at).length };
+}
+const catParts = c => PARTS.filter(p => p.cat === c);
+function defWear(){
+  return { base:'base-sun', bg:'none', ray:'none', wear:'none', cheek:'none', eye:'none',
+    mouth:'none', glasses:'none', neck:'none', hat:'none', hand:'none', fx:'none' };
+}
+const TIPS = [
+  {e:'🧴', t:'ローションなら、顔に500円玉1つ分か1円玉2つ分がめやす。少なすぎるとパッケージどおりの力が出にくいよ。'},
+  {e:'⏰', t:'2〜3時間おきのぬりなおしがパワーキープのコツ。あせをかいたり、水にぬれたり、タオルでふいたら早めにね!'},
+  {e:'👂', t:'耳・くび・うなじ・手のこうは、ぬりわすれが多いところ。ゆびさしチェックでぬりぬり!'},
+  {e:'☁️', t:'くもりの日もUVは地上にとどくよ(晴れの日の6わりくらいのことも)。ゆだんしないでね。'},
+  {e:'🔤', t:'SPFはUV-B、PAはUV-Aというしがいせんをふせぐめやす。ふだんはSPF30・PA+++、外は高めが安心。'},
+  {e:'🕛', t:'10時〜14時ごろはUVがいちばん強い時間。日かげやぼうしも上手につかおう。'},
+  {e:'👒', t:'日やけ止め+ぼうし・日がさ・サングラスの合わせわざで、おはだをまもる力がアップ!'},
+  {e:'🫧', t:'おとすときはゴシゴシしないでやさしくね。お顔はクレンジングでやさしくおとそう。'},
+  {e:'🚗', t:'車の中でも、まどを通ってUV-Aは入ってくるよ。長い運転やまどぎわでは気をつけて。'},
+  {e:'⛄', t:'雪や水面、すなはまは日ざしをはねかえすよ。ふだんより強くあたるので、下からのUVにも用心。'},
+  {e:'👶', t:'赤ちゃんは日かげが第一。生後6か月ごろまでは、ふくやぼうしでまもってあげてね。'},
+  {e:'👀', t:'目もUVでダメージをうけるよ。サングラスや、つばの広いぼうしで目もまもろう。'},
+  {e:'💋', t:'くちびるもやけるよ。UVカットのリップを使うと安心。ぬりなおしもわすれずに。'},
+  {e:'🧊', t:'日やけしたら、まずひやしてうるおいを。ヒリヒリや水ぶくれがひどいときはお医者さんへ。'},
+  {e:'⛰️', t:'高い山の上ほどUVは強いよ。同じ晴れの日でも、下にいるときより強くあたるんだ。'},
+  {e:'🦵', t:'顔だけでなく、体もわすれずに。うでや足など、日にあたるところにはぬっておこう。'},
+  {e:'📅', t:'日やけ止めにも、使えるきげんがあるよ。ずっと使わずにのこっていた使いかけの日やけ止めは、使わない方がいいかも。'},
+  {e:'🌸', t:'UVは春から強くなるよ。夏だけでなく、春や秋、冬も少しずつあたっているよ。'},
+  {e:'💧', t:'おはだがかさつくお友だちは、日やけ止めの前にほしつしようね!'},
+  {e:'🌞', t:'じつはほとんどの人が、日やけ止めが足りていないって知ってた?日やけ止めはたっぷり使おうね!'},
+  {e:'💄', t:'ひやけ止めいがいのおけしょうにも、しがいせんをふせぐものがあるよ!おけしょうとくみあわせると、まもる力がふえるよ。'},
+];
+const KEY = 'nurisan-v1';
+const DAY_START = 6, DAY_END = 18;
+const CIRC = 2 * Math.PI * 94;
+const APP_TITLE = 'ぬりサン! ☀️ 光老化よぼうアプリ';
+
+/* ================= 状態 ================= */
+let S = null;
+let ac = null;                // AudioContext
+let uvLive = null, uvLiveAt = 0, lastPos = null;   // Open-MeteoのUVよそう用
+let geoRequestSeq = 0, uvRequestSeq = 0, uvController = null;
+let prevState = '';
+let dueChimes = 0, lastChimeAt = 0;
+let tipIdx = Math.floor(Math.random() * TIPS.length);
+let gachaQueue = [];
+let buyPending = null, buyTimer = null;   // こうかんの2回タップかくにん
+let stateDirty = false;                   // 読みこみ時に直したデータを保存するための印
+let stateReadFailed = false;              // 読みこめない間に既存データを上書きしないための印
+let stateWriteFailed = false;             // 実データの保存失敗をモーダル内でも知らせ続ける
+let liveUvStarted = false, liveUvTimer = null, liveUvSession = 0;
+let lastLiveUvAttemptAt = 0, geoPermissionStatus = null, geoPermissionHandler = null;
+let recordPending = false;                // すばやい連打・同時記録を直列化する
+let toastTimer = null;
+let gachaTransitioning = false, gachaTransitionTimer = null, gachaRevealTimer = null, gachaGeneration = 0;
+let modalScrollY = 0;
+let activeTab = 'home';
+const tabScroll = { home:0, dress:0, zukan:0, log:0 };
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const ds = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const today = () => ds(new Date());
+function calendarDayOffset(offset, base = new Date()){
+  const d = new Date(base);
+  d.setHours(12, 0, 0, 0);                // 夏時間の23/25時間の日でも日付を正しく動かす
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+const yesterday = () => ds(calendarDayOffset(-1));
+const monthKey = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1); };
+
+function defS(){
+  return { onboard:false, starter:0, coins:0, coinsTotal:0,
+    intervalMin:180, sound:true, lastAppliedAt:0, nextDueAt:0,
+    region:'kanto', regionManual:false,
+    parts:{}, wear:defWear(), migrated:false,
+    lastDate:'', streak:0, bestStreak:0, total:0, log:{}, col:{} };
+}
+const STATE_KEYS = Object.freeze(Object.keys(defS()));
+const STATE_KEY_SET = new Set(STATE_KEYS.concat(['avatar']));   // avatarは旧版の移行時だけ読む
+function decodeState(raw){
+  const parsed = JSON.parse(raw);
+  const next = defS();
+  if (!isObj(parsed)) return { state:next, dirty:true };
+  STATE_KEYS.forEach(k => {
+    if (Object.prototype.hasOwnProperty.call(parsed, k)) next[k] = parsed[k];
+  });
+  if (Object.prototype.hasOwnProperty.call(parsed, 'avatar')) next.avatar = parsed.avatar;
+  return { state:next, dirty:Object.keys(parsed).some(k => !STATE_KEY_SET.has(k)) };
+}
+const appliedToday = () => (S.log[today()] || 0) > 0;
+const curStreak = () => (S.lastDate === today() || S.lastDate === yesterday()) ? S.streak : 0;
+function monthCount(){ const mk = monthKey(); let s = 0;
+  for (const k in S.log) if (k.startsWith(mk)) s += S.log[k]; return s; }
+
+/* ================= 保存(環境を自動判別) =================
+   Claude内 → Claudeのストレージ / 外部公開 → localStorage / どちらも不可 → メモリ */
+const store = (() => {
+  if (window.storage){
+    return { kind:'claude',
+      async get(k){ const r = await window.storage.get(k); return r ? r.value : null; },
+      async set(k,v){ await window.storage.set(k, v); },
+      async remove(k){
+        if (typeof window.storage.delete === 'function') await window.storage.delete(k);
+        else await window.storage.set(k, null);
+      } };
+  }
+  try {
+    const probe = '__nurisan_storage_probe__';
+    const previous = localStorage.getItem(probe);
+    let changed = false;
+    try {
+      localStorage.setItem(probe, '1'); changed = true;
+      if (localStorage.getItem(probe) !== '1') throw new Error('storage probe failed');
+    } finally {
+      if (changed){
+        if (previous === null) localStorage.removeItem(probe); else localStorage.setItem(probe, previous);
+      }
+    }
+    return { kind:'local',
+      async get(k){ return localStorage.getItem(k); },
+      async set(k,v){ localStorage.setItem(k, v); },
+      async remove(k){ localStorage.removeItem(k); } };
+  } catch(e){}
+  const m = {};
+  return { kind:'mem',
+    async get(k){ return (k in m) ? m[k] : null; },
+    async set(k,v){ m[k] = v; },
+    async remove(k){ delete m[k]; } };
+})();
+
+async function loadState(){
+  stateDirty = false;
+  stateReadFailed = false;
+  let raw;
+  try {
+    raw = await store.get(KEY);
+  } catch(e){
+    S = defS();
+    stateReadFailed = true;
+    fixData(); migrated = migrate(); fixWear();
+    stateDirty = false;                    // 読めなかった既存データを初期値で上書きしない
+    return;
+  }
+  if (raw){
+    try {
+      const decoded = decodeState(raw);
+      S = decoded.state; stateDirty = decoded.dirty;
+    }
+    catch(e){ S = defS(); stateDirty = true; }
+  } else {
+    S = defS();
+  }
+  fixData();              // 先にこわれたデータを正す(移行中のエラーで全記録が消えないように)
+  migrated = migrate();   // 旧データ(なかま20体・旧きせかえ)をパーツへ移行
+}
+async function saveState(){
+  try {
+    await store.set(KEY, JSON.stringify(S));
+    stateDirty = false; stateWriteFailed = false;
+    return true;
+  } catch(e){
+    persistenceError();
+    return false;
+  }
+}
+function adoptStoredState(raw){
+  try {
+    const decoded = decodeState(raw);
+    S = decoded.state;
+    stateDirty = decoded.dirty; stateReadFailed = false; migratedLegacy = false;
+    fixData();
+    migrated = migrate();
+    fixWear();
+    return true;
+  } catch(e){ return false; }
+}
+async function syncLatestState(raw){
+  try {
+    const value = raw !== undefined ? raw : await store.get(KEY);
+    if (!value) return false;
+    const ok = adoptStoredState(value);
+    if (!ok){ stateReadFailed = true; showRuntimeWarning(); }
+    return ok;
+  } catch(e){ stateReadFailed = true; showRuntimeWarning(); return false; }
+}
+
+function adoptEmptyState(){
+  S = defS();
+  stateDirty = false; stateReadFailed = false; migratedLegacy = false;
+  fixData(); migrated = migrate(); fixWear();
+  stateDirty = false;
+}
+function persistenceError(){
+  stateWriteFailed = true;
+  showRuntimeWarning();
+}
+const STATE_LOCK = KEY + '-state-lock';
+const LEASE_KEY = KEY + '-lease';
+const waitMs = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function withLocalLease(task){
+  const owner = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+    ? crypto.randomUUID() : Math.random().toString(36) + Date.now();
+  const started = performance.now(), ttl = 5000;
+  while (performance.now() - started < 3000){
+    const now = Date.now();
+    let lease = null;
+    try { lease = JSON.parse(localStorage.getItem(LEASE_KEY) || 'null'); } catch(e){}
+    if (!lease || !lease.owner || lease.expires <= now || lease.expires - now > ttl * 2){
+      try {
+        localStorage.setItem(LEASE_KEY, JSON.stringify({ owner, expires:now + ttl }));
+        const check = JSON.parse(localStorage.getItem(LEASE_KEY) || 'null');
+        if (check && check.owner === owner){
+          try { return await task(); }
+          finally {
+            try {
+              const current = JSON.parse(localStorage.getItem(LEASE_KEY) || 'null');
+              if (current && current.owner === owner) localStorage.removeItem(LEASE_KEY);
+            } catch(e){}
+          }
+        }
+      } catch(e){ throw e; }
+    }
+    await waitMs(18 + Math.floor(Math.random() * 22));
+  }
+  throw new Error('state lock timeout');
+}
+async function withStateLock(task){
+  if (navigator.locks && typeof navigator.locks.request === 'function')
+    return navigator.locks.request(STATE_LOCK, { mode:'exclusive' }, task);
+  if (store.kind === 'local') return withLocalLease(task);
+  return task();
+}
+async function mutateState(change){
+  try {
+    const result = await withStateLock(async () => {
+      let raw;
+      try { raw = await store.get(KEY); }
+      catch(e){ stateReadFailed = true; showRuntimeWarning(); return { ok:false }; }
+      if (raw){
+        if (!adoptStoredState(raw)){ persistenceError(); return { ok:false }; }
+      } else adoptEmptyState();
+      const before = JSON.stringify(S);
+      let value;
+      try { value = await change(); }
+      catch(e){ adoptStoredState(before); throw e; }
+      if (value && value.changed === false){
+        if (!stateDirty) return { ok:true, value };
+        if (await saveState()) return { ok:true, value };
+        adoptStoredState(before);
+        return { ok:false };
+      }
+      fixWear();
+      if (await saveState()) return { ok:true, value };
+      adoptStoredState(before);
+      return { ok:false };
+    });
+    showRuntimeWarning();
+    return result;
+  } catch(e){
+    persistenceError();
+    return { ok:false };
+  }
+}
+async function clearPersistedState(){
+  try {
+    return await withStateLock(async () => {
+      let prior = null;
+      try {
+        prior = await store.get(KEY);
+        await store.remove(KEY);
+        if (await store.get(KEY) !== null) throw new Error('state delete was not verified');
+      } catch(e){
+        if (prior){
+          try { await store.set(KEY, prior); } catch(ignore){}
+          adoptStoredState(prior);
+        }
+        persistenceError();
+        return false;
+      }
+      stateWriteFailed = false;
+      adoptEmptyState();
+      return true;
+    });
+  } catch(e){ persistenceError(); return false; }
+}
+
+/* ================= UV目安 ================= */
+/* ---- 地域別・月別のUVピーク目安(晴天時の正午ごろ、1〜12月) ---- */
+const REGIONS = [
+  { id:'hokkaido', n:'北海道',           p:[1,2,4,5,6,7,7,7,5,3,2,1] },
+  { id:'tohoku',   n:'東北',             p:[2,3,4,6,7,8,8,8,6,4,2,2] },
+  { id:'kanto',    n:'かんとう',               p:[2,3,5,7,8,9,9,9,7,5,3,2] },
+  { id:'chubu',    n:'ちゅうぶ',               p:[2,3,5,7,8,9,9,9,7,5,3,2] },
+  { id:'kinki',    n:'きんき',             p:[2,4,5,7,8,9,9,9,7,5,3,2] },
+  { id:'chugoku',  n:'ちゅうごく・しこく',       p:[3,4,6,7,9,9,10,9,7,5,4,3] },
+  { id:'kyushu',   n:'きゅうしゅう',             p:[3,4,6,8,9,10,10,10,8,6,4,3] },
+  { id:'okinawa',  n:'おきなわ・あまみ',       p:[4,5,7,9,10,11,11,11,10,8,5,4] },
+];
+const REGION_SOURCE = window.NURISAN_REGION_SHAPES;
+const REGION_SHAPES = REGION_SOURCE && typeof REGION_SOURCE === 'object' && !Array.isArray(REGION_SOURCE)
+  ? REGION_SOURCE : {};
+function validRegionRing(ring){
+  return Array.isArray(ring) && ring.length >= 3 && ring.every(point => Array.isArray(point)
+    && point.length >= 2 && typeof point[0] === 'number' && Number.isFinite(point[0])
+    && typeof point[1] === 'number' && Number.isFinite(point[1])
+    && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90);
+}
+function validRegionPolygon(polygon){
+  return Array.isArray(polygon) && polygon.length > 0 && polygon.every(validRegionRing);
+}
+const SAFE_REGION_SHAPES = {};
+REGIONS.forEach(r => {
+  const polygons = Array.isArray(REGION_SHAPES[r.id]) ? REGION_SHAPES[r.id] : [];
+  SAFE_REGION_SHAPES[r.id] = polygons.filter(validRegionPolygon);
+});
+const regionDataAvailable = REGIONS.every(r => Array.isArray(REGION_SHAPES[r.id])
+  && REGION_SHAPES[r.id].length > 0 && SAFE_REGION_SHAPES[r.id].length === REGION_SHAPES[r.id].length);
+function region(){ return REGIONS.find(r => r.id === ((S && S.region) || 'kanto')) || REGIONS[2]; }
+// 緯度経度 → 国土数値情報の行政区域を簡略化した境界で地域を判定
+function pointInRing(point, ring){
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){
+    const a = ring[i], b = ring[j];
+    if ((a[1] > point[1]) !== (b[1] > point[1])
+      && point[0] < (b[0] - a[0]) * (point[1] - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
+  }
+  return inside;
+}
+function pointInPolygon(point, polygon){
+  return pointInRing(point, polygon[0]) && !polygon.slice(1).some(r => pointInRing(point, r));
+}
+function regionFromCoords(lat, lon){
+  lat = Number(lat); lon = Number(lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  // アプリの表示区分では鹿児島県の奄美群島も「おきなわ・あまみ」にまとめる
+  if (lat >= 24 && lat < 30 && lon >= 122.5 && lon <= 132) return 'okinawa';
+  const point = [lon, lat];
+  for (const r of REGIONS){
+    const polygons = SAFE_REGION_SHAPES[r.id];
+    if (polygons.some(polygon => pointInPolygon(point, polygon))) return r.id;
+  }
+  // 境界を簡略化した際に落ちやすい小島だけを狭い範囲で補う
+  if ((lat >= 24 && lat <= 28.5 && lon >= 140 && lon <= 143)
+    || (lat >= 24 && lat <= 25 && lon >= 153 && lon <= 155)
+    || (lat >= 20 && lat <= 21 && lon >= 135 && lon <= 137)) return 'kanto'; // 小笠原3群
+  return null;
+}
+function uvEstimate(d){
+  const peaks = region().p;                     // 地域別の月別ピーク
+  const h = d.getHours() + d.getMinutes()/60;
+  if (h < DAY_START || h >= DAY_END) return 0;
+  const f = Math.sin(Math.PI * (h - DAY_START) / (DAY_END - DAY_START));
+  return Math.round(peaks[d.getMonth()] * Math.max(0, f) * 10) / 10;
+}
+function uvInfo(v){
+  if (v < 1)  return { c:'ほぼなし',     col:'#7BD98A', text:'#245B36', a:'いまはUVほぼゼロ。ゆっくり休もう🌙' };
+  if (v < 3)  return { c:'弱い',         col:'#7BD98A', text:'#245B36', a:'弱めだけどゆだんしないでね。長く外にいるなら、しっかりまもろう。' };
+  if (v < 6)  return { c:'ふつう',       col:'#FFB300', text:'#765100', a:'外に出るなら日やけ止めを。ぼうしもあると◎' };
+  if (v < 8)  return { c:'強い',         col:'#FF8A3D', text:'#873900', a:'しっかりまもろう!日かげも上手につかってね。' };
+  if (v < 11) return { c:'とても強い',   col:'#FF6B6B', text:'#9B2431', a:'フルそうびレベル。こまめなぬりなおしがだいじ!' };
+  return       { c:'ものすごく強い',     col:'#B76BFF', text:'#66328A', a:'できれば長い時間のお出かけはひかえてね。外に出るならマックスでまもろう。' };
+}
+
+/* ================= ホーム状態 ================= */
+function homeState(){
+  const now = new Date(), h = now.getHours();
+  const night = (h >= DAY_END || h < DAY_START);
+  if (night) return appliedToday() ? 'nightDone' : 'nightIdle';
+  if (!appliedToday()) return 'morning';
+  if (S.lastAppliedAt && S.lastAppliedAt > Date.now()) return 'due'; // 時計を戻したら長すぎる残り時間を出さない
+  if (S.nextDueAt && Date.now() < S.nextDueAt) return 'active';
+  return 'due';
+}
+function fmtRemain(ms){
+  const s = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return (h > 0 ? h + ':' : '') + pad(m) + ':' + pad(ss);
+}
+
+let mascotState = 'm-morning';
+let migrated = false, migratedLegacy = false, dressCat = 'base';
+
+/* ---- 旧データの移行(初回のみ) ---- */
+const MIG_COL = { drop:'base-drop', cloud:'base-cloud', sunflower:'base-sunflower', dolphin:'base-dolphin',
+  sunscreen:'hand-sunscreen', parasol:'hand-parasol', glasses:'glasses-sun', hat:'hat-straw',
+  leaf:'hat-leaf', breeze:'fx-breeze', ice:'hand-ice', bronze:'neck-bronze', silver:'neck-silver',
+  gold:'neck-gold', king:'hat-crown', star:'fx-kira' };
+const MIG_AV = { ray:{ hana:'ray-togari', maru:'ray-maru', kira:'ray-kira' },
+  cheek:{ cream:'cheek-cream', pink:'cheek-pink', heart:'cheek-pink' },
+  acc:{ cream:'hat-cap', mugi:'hat-straw', ribbon:'hat-ribbon', glass:'glasses-round' } };
+function migrate(){
+  if (S.migrated === true){
+    if ('avatar' in S){ delete S.avatar; stateDirty = true; }
+    return false;
+  }
+  if (!isObj(S.parts)) S.parts = {};
+  DEFAULT_OWN.forEach(id => { if (!S.parts[id]) S.parts[id] = 1; });
+  // すでに使っていた人だけ、顔のパーツを持った状態で移行する(新規は顔からっぽで開始)
+  const wasUsing = (S.total || 0) > 0 || Object.keys(S.col || {}).length > 0;
+  migratedLegacy = wasUsing || !!S.avatar;
+  if (wasUsing){
+    FIRST_REWARDS.forEach(id => { if (!S.parts[id]) S.parts[id] = 1; });
+    S.starter = FIRST_REWARDS.length;
+  }
+  if (!S.coinsTotal) S.coinsTotal = S.coins || 0;
+  Object.keys(S.col || {}).forEach(k => {          // なかま20体 → パーツ
+    const id = MIG_COL[k], count = num(S.col[k], 0);
+    if (id && partById(id) && count > 0) S.parts[id] = (S.parts[id] || 0) + count;
+  });
+  const w = defWear();
+  if (wasUsing) FIRST_REWARDS.forEach(id => { const p = partById(id); if (p) w[p.cat] = id; });
+  if (S.avatar) Object.keys(MIG_AV).forEach(k => {  // 旧きせかえの選択 → パーツ
+    const id = MIG_AV[k][S.avatar[k]];
+    const p = id && partById(id);
+    if (p){ if (!S.parts[id]) S.parts[id] = 1; w[p.cat] = id; }
+  });
+  if ('avatar' in S) delete S.avatar;
+  S.wear = w;   // 移行時は初期装備を作りなおす(旧デフォルトに上書きされないように)
+  S.migrated = true;
+  stateDirty = true;
+  return true;  // パーツ移動が0件でも、移行済みフラグや初期パーツを保存する
+}
+/* ---- 保存データの安全チェック ---- */
+function num(v, min){ const n = Math.floor(Number(v)); return (isFinite(n) && n >= min) ? n : min; }
+function isObj(o){ return o && typeof o === 'object' && !Array.isArray(o); }
+function validDayKey(k){
+  if (typeof k !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(k)) return false;
+  const a = k.split('-').map(Number), y = a[0], m = a[1], d = a[2];
+  if (y < 2000 || y > 2100) return false;
+  const x = new Date(y, m - 1, d);
+  return x.getFullYear() === y && x.getMonth() === m - 1 && x.getDate() === d;
+}
+function fixData(){
+  const before = JSON.stringify(S);
+  if ('uid' in S) delete S.uid;                         // 使っていない旧識別子は残さない
+  if (!isObj(S.parts)) S.parts = {};
+  if (!isObj(S.log))   S.log = {};
+  if (!isObj(S.col))   S.col = {};
+  if (!isObj(S.wear))  S.wear = defWear();          // 文字列などが入っていても復旧する
+  Object.keys(S.parts).forEach(k => {
+    if (!partById(k)){ delete S.parts[k]; return; }
+    const v = num(S.parts[k], 0);
+    if (v <= 0) delete S.parts[k]; else S.parts[k] = Math.min(v, 99);
+  });
+  const todayKey = today();
+  Object.keys(S.log).forEach(k => {                  // 日付キーと回数を検査
+    if (!validDayKey(k) || k > todayKey){ delete S.log[k]; return; }
+    const v = num(S.log[k], 0);
+    if (v <= 0) delete S.log[k]; else S.log[k] = Math.min(v, 99);
+  });
+  const interval = Math.floor(Number(S.intervalMin));
+  S.intervalMin = [120,150,180].indexOf(interval) >= 0 ? interval : 180;
+  const now = Date.now();
+  S.lastAppliedAt = num(S.lastAppliedAt, 0);
+  if (S.lastAppliedAt > now) S.lastAppliedAt = 0;    // 未来の時刻は無効にする
+  S.nextDueAt = num(S.nextDueAt, 0);
+  const maxDue = S.lastAppliedAt ? S.lastAppliedAt + S.intervalMin * 60000 : 0;
+  if (!S.lastAppliedAt || S.nextDueAt < S.lastAppliedAt || S.nextDueAt > maxDue) S.nextDueAt = 0;
+  if (!validDayKey(S.lastDate) || S.lastDate > todayKey) S.lastDate = '';
+  S.coins      = num(S.coins, 0);
+  S.coinsTotal = Math.max(S.coins, num(S.coinsTotal, 0));
+  // 進み具合は実際に持っている固定パーツから作り直す。欠けたパーツは次回また受け取れる。
+  S.starter    = FIRST_REWARDS.filter(id => !!S.parts[id]).length;
+  S.streak     = num(S.streak, 0);
+  S.bestStreak = Math.max(S.streak, num(S.bestStreak, 0));
+  S.total      = num(S.total, 0);
+  if (typeof S.sound !== 'boolean') S.sound = true;
+  S.onboard = S.onboard === true;
+  S.regionManual = S.regionManual === true;
+  S.migrated = S.migrated === true;
+  if (!REGIONS.some(r => r.id === S.region)) S.region = 'kanto';
+  if (JSON.stringify(S) !== before) stateDirty = true;
+}
+/* ---- 装備の安全チェック ---- */
+function fixWear(){
+  const before = JSON.stringify(S);
+  fixData();
+  if (!S.wear) S.wear = defWear();
+  CATS.forEach(c => {
+    const id = S.wear[c.id], p = partById(id);
+    const ok = (c.id === 'base') ? (p && p.cat === 'base' && S.parts[id])
+                                 : (id === 'none' || (p && p.cat === c.id && S.parts[id]));
+    if (!ok) S.wear[c.id] = (c.id === 'base') ? 'base-sun' : 'none';
+  });
+  if (!S.parts['base-sun']) S.parts['base-sun'] = 1;
+  if (JSON.stringify(S) !== before) stateDirty = true;
+}
+const baseOf = () => partById(S.wear.base) || partById('base-sun');
+
+/* ---- キャラを組み立てて描く ---- */
+function avatarSVG(st){
+  const night = (st === 'm-night'), due = (st === 'm-due');
+  const b = baseOf(), col = night ? b.n2 : b.d;
+  let out = '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="--b1:' + col[0] + ';--b2:' + col[1] + '">';
+  DRAW.forEach(cat => {
+    if (cat === 'base'){ out += b.svg; return; }
+    if (cat === 'ray'  && night) return;                       // 夜はひかりを消す
+    if (cat === 'eye'  && night){                                // 夜は目をとじる(強制)
+      if (S.wear.eye !== 'none') out += faceWrap(b, CLOSED_EYE);  // ただし目をもらう前は なにも出さない
+      return;
+    }
+    if (cat === 'hat'){
+      if (night){ out += faceWrap(b, NIGHTCAP); return; }       // 夜はナイトキャップ(強制)
+      const p = partById(S.wear[cat]);
+      if (p) out += faceWrap(b, '<g transform="translate(0,' + ((b.headTop || 22) - 22) + ')">' + p.svg + '</g>');
+      return;
+    }
+    const p = partById(S.wear[cat]);
+    if (p) out += (FACE_CATS.indexOf(cat) >= 0) ? faceWrap(b, p.svg) : p.svg;
+  });
+  if (night) out += ZZZ;
+  if (due) out += SWEAT;
+  return out + '</svg>';
+}
+function setMascot(st){
+  mascotState = st;
+  const el = $('mascot');
+  el.className = 'mascot ' + st;
+  el.innerHTML = avatarSVG(st);
+}
+function renderHome(st){
+  const mascot = $('mascot'), title = $('stTitle'), sub = $('stSub'),
+        cd = $('countdown'), ring = $('ringFg');
+  document.body.classList.toggle('mode-due', st === 'due');
+  document.body.classList.toggle('mode-night', st === 'nightDone' || st === 'nightIdle');
+  ring.setAttribute('stroke-dasharray', CIRC);
+
+  if (st === 'morning'){
+    setMascot('m-morning');
+    cd.textContent = '';
+    const nextStarter = FIRST_REWARDS.find(id => !S.parts[id]);
+    if (nextStarter){
+      const nx = partById(nextStarter);
+      const cn = (CATS.find(c => c.id === nx.cat) || {}).n || '';
+      title.textContent = 'ぬったら「' + cn + '」がもらえるよ!';
+      sub.textContent = 'ぬりサンの顔はまだ からっぽ。ぬるたびにパーツがふえて、顔ができていくよ。';
+    } else {
+      title.textContent = 'きょう1回目のひとぬり、いこう!';
+      sub.textContent = '朝の日やけ止めが1日のスタート。ぬったらボタンをタップ!';
+    }
+    ring.setAttribute('stroke-dashoffset', CIRC);
+  } else if (st === 'active'){
+    setMascot('m-active');
+    title.textContent = 'まもられ中!つぎのぬりなおしまで';
+    const remain = S.nextDueAt - Date.now();
+    cd.textContent = fmtRemain(remain);
+    sub.textContent = 'あせをかいたり水にぬれたら、早めのぬりなおしがおすすめ。'
+      + (S.sound && (!ac || ac.state !== 'running') ? ' 音をつかうには、画面を一度タップしてね。' : '');
+    const frac = Math.min(1, Math.max(0, remain / (S.intervalMin * 60000)));
+    ring.setAttribute('stroke-dashoffset', CIRC * (1 - frac));
+  } else if (st === 'due'){
+    setMascot('m-due');
+    title.textContent = 'ぬりなおしの時間だよ!';
+    cd.textContent = '';
+    sub.textContent = 'まもるパワーがへってきたかも。ぬりぬりして「ぬった!」をタップ!'
+      + (S.sound && (!ac || ac.state !== 'running') ? ' 音をつかうには、画面を一度タップしてね。' : '');
+    ring.setAttribute('stroke-dashoffset', 0);
+  } else if (st === 'nightDone'){
+    setMascot('m-night');
+    title.textContent = 'きょうのサンケアはおしまい!おつかれさま';
+    cd.textContent = '';
+    sub.textContent = '夜(18時〜朝6時)はおしらせをおやすみするよ。また明日ね☀️';
+    ring.setAttribute('stroke-dashoffset', 0);
+  } else {
+    setMascot('m-night');
+    title.textContent = 'もう夜だよ。ゆっくり休もう';
+    cd.textContent = '';
+    sub.textContent = 'あしたの朝、わすれずにひとぬりからスタート☀️';
+    ring.setAttribute('stroke-dashoffset', CIRC);
+  }
+}
+function renderChips(){
+  $('chipToday').textContent = S.log[today()] || 0;
+  $('chipStreak').textContent = curStreak();
+  $('chipCoin').textContent = S.coins || 0;
+}
+function renderUV(){
+  const liveAge = Date.now() - uvLiveAt;
+  const live = (uvLive != null) && liveAge >= 0 && liveAge < 60 * 60000;   // 取得した予測は1時間有効
+  const v = live ? uvLive : uvEstimate(new Date());
+  const info = uvInfo(v);
+  $('uvVal').textContent = 'UVレベル ' + v;
+  $('uvCat').textContent = info.c;
+  $('uvCat').style.color = info.text;
+  $('uvMark').style.left = Math.min(v, 11) / 11 * 100 + '%';
+  $('uvMark').style.borderColor = info.col;
+  $('uvAdvice').textContent = info.a;
+  const badge = $('uvBadge');
+  badge.textContent = live ? 'いまのよそう' : 'ちいきべつ';
+  badge.classList.toggle('live', live);
+  $('uvNote').textContent = live
+    ? '※いまいるところの気しょうモデルによるUVのよそうち(Open-Meteo)。30分ごとにこうしんをためすよ。じっさいの数字とちがうことがあるよ。いばしょはおよそ1kmにまるめておくり、このアプリにはほぞんしないよ。'
+    : '※' + region().n + 'の、きせつと時間からのめやすだよ(すんでいるところは⚙️でかえられるよ)。'
+      + (store.kind === 'claude'
+          ? 'お天気でほんとうの強さはかわるよ。'
+          : 'スマホの「いばしょ」をオンにすると、いまいるところのよそうちになるよ。');
+}
+
+/* ---- 現在地のUV予測(Open-Meteo) ---- */
+const LIVE_UV_REFRESH_MS = 30 * 60000;
+async function fetchUV(lat, lon, signal){
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon
+    + '&current=uv_index&hourly=uv_index&forecast_days=1&timezone=auto&timeformat=unixtime';
+  const res = await fetch(url, signal ? { signal } : undefined);
+  if (!res.ok) throw new Error('uv http ' + res.status);
+  const d = await res.json();
+  let v = (d && d.current && typeof d.current.uv_index === 'number') ? d.current.uv_index : null;
+  if (v == null && d && d.hourly && Array.isArray(d.hourly.uv_index)){   // 予備:現在にいちばん近い時間を拾う
+    const offset = Number(d.utc_offset_seconds) || 0;
+    let nearest = -1, nearestDiff = Infinity;
+    (d.hourly.time || []).forEach((t, i) => {
+      const text = String(t), explicitZone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+      const ms = typeof t === 'number' ? t * 1000
+        : Date.parse(explicitZone ? text : text + 'Z') - (explicitZone ? 0 : offset * 1000);
+      const diff = Math.abs(ms - Date.now());
+      if (Number.isFinite(diff) && diff < nearestDiff){ nearest = i; nearestDiff = diff; }
+    });
+    if (nearest >= 0) v = d.hourly.uv_index[nearest];
+  }
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error('uv unavailable');
+  return Math.round(Math.max(0, v) * 10) / 10;
+}
+function initLiveUV(session = liveUvSession, force = false){
+  if (store.kind === 'claude') return;   // Claude内プレビューは推定表示のまま(外部通信不可のため)
+  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) return;
+  const now = Date.now();
+  if (!force && lastLiveUvAttemptAt && now >= lastLiveUvAttemptAt
+    && now - lastLiveUvAttemptAt < LIVE_UV_REFRESH_MS) return;
+  lastLiveUvAttemptAt = now;
+  const geoRequest = ++geoRequestSeq;
+  navigator.geolocation.getCurrentPosition(async pos => {
+    if (geoRequest !== geoRequestSeq || session !== liveUvSession || !liveUvStarted || !S.onboard) return;
+    const lat = Number(pos.coords.latitude), lon = Number(pos.coords.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
+    // 地域判定は端末内だけで正確な座標を使い、APIへ送る値だけ約1km単位へ丸める
+    const rounded = { lat: Math.round(lat * 100) / 100, lon: Math.round(lon * 100) / 100 };
+    if (!lastPos || lastPos.lat !== rounded.lat || lastPos.lon !== rounded.lon){
+      uvLive = null; uvLiveAt = 0;
+    }
+    lastPos = rounded;
+    const r = regionFromCoords(lat, lon);
+    if (r){
+      const tx = await mutateState(() => {
+        if (S.regionManual || S.region === r) return { changed:false };
+        S.region = r; return { changed:true };
+      });
+      if (tx.ok) renderUV();
+    }
+    if (geoRequest === geoRequestSeq) await refreshLiveUV(session);
+  }, () => {
+    if (geoRequest !== geoRequestSeq || session !== liveUvSession || !liveUvStarted) return;
+    clearLiveUVCache();
+  }, { maximumAge: 600000, timeout: 8000 });
+}
+async function refreshLiveUV(session = liveUvSession){
+  if (!lastPos) return;
+  const pos = { lat:lastPos.lat, lon:lastPos.lon };
+  const request = ++uvRequestSeq;
+  if (uvController) uvController.abort();
+  uvController = typeof AbortController === 'function' ? new AbortController() : null;
+  const controller = uvController;
+  const timeout = setTimeout(() => { if (controller) controller.abort(); }, 8000);
+  try {
+    const value = await fetchUV(pos.lat, pos.lon, controller && controller.signal);
+    if (request !== uvRequestSeq || session !== liveUvSession || !liveUvStarted || !S.onboard) return;
+    uvLive = value; uvLiveAt = Date.now(); renderUV();
+  }
+  catch(e){ /* 取得失敗時は推定のまま */ }
+  finally {
+    clearTimeout(timeout);
+    if (uvController === controller) uvController = null;
+  }
+}
+function clearLiveUVCache(){
+  uvRequestSeq++;
+  if (uvController) uvController.abort();
+  uvController = null;
+  lastPos = null; uvLive = null; uvLiveAt = 0;
+  if (S) renderUV();
+}
+function stopGeoPermissionWatch(){
+  if (geoPermissionStatus && geoPermissionHandler && typeof geoPermissionStatus.removeEventListener === 'function')
+    geoPermissionStatus.removeEventListener('change', geoPermissionHandler);
+  geoPermissionStatus = null; geoPermissionHandler = null;
+}
+async function watchGeoPermission(session){
+  stopGeoPermissionWatch();
+  if (!navigator.permissions || typeof navigator.permissions.query !== 'function') return;
+  try {
+    const status = await navigator.permissions.query({ name:'geolocation' });
+    if (session !== liveUvSession || !liveUvStarted) return;
+    geoPermissionStatus = status;
+    geoPermissionHandler = () => {
+      if (session !== liveUvSession || !liveUvStarted) return;
+      if (status.state === 'denied'){
+        lastLiveUvAttemptAt = 0;
+        geoRequestSeq++;
+        clearLiveUVCache();
+      } else initLiveUV(session);            // 初回許可の直後に同じ要求を二重送信しない
+    };
+    if (typeof status.addEventListener === 'function') status.addEventListener('change', geoPermissionHandler);
+  } catch(e){ /* Permissions APIが使えない環境は30分更新だけで動かす */ }
+}
+function resumeLiveUVUpdates(){
+  if (!S.onboard || !liveUvStarted) return;
+  if (geoPermissionStatus && geoPermissionStatus.state === 'denied'){
+    lastLiveUvAttemptAt = 0; geoRequestSeq++; clearLiveUVCache();
+    return;
+  }
+  initLiveUV(liveUvSession);
+}
+function startLiveUVUpdates(){
+  if (liveUvStarted) return;
+  liveUvStarted = true;
+  const session = ++liveUvSession;
+  lastLiveUvAttemptAt = 0;
+  initLiveUV(session, true);
+  watchGeoPermission(session);
+  liveUvTimer = setInterval(() => initLiveUV(session), LIVE_UV_REFRESH_MS);
+}
+function stopLiveUVUpdates(){
+  liveUvSession++; geoRequestSeq++;
+  if (liveUvTimer !== null) clearInterval(liveUvTimer);
+  liveUvTimer = null; liveUvStarted = false; lastLiveUvAttemptAt = 0;
+  stopGeoPermissionWatch();
+  clearLiveUVCache();
+}
+function renderTip(){
+  $('tipEmoji').textContent = TIPS[tipIdx].e;
+  $('tipText').textContent = TIPS[tipIdx].t;
+}
+function tileSVG(p){
+  const b = baseOf();
+  const pale = '<g opacity=".22">' + b.svg + '</g>';
+  const col = (p.cat === 'base') ? p.d : ['#CBD6E5','#EAF1F9'];
+  const inner = (p.cat === 'base') ? p.svg
+    : (p.cat === 'bg' || p.cat === 'ray') ? p.svg + pale : pale + p.svg;
+  return '<svg viewBox="0 0 120 120" style="--b1:' + col[0] + ';--b2:' + col[1] + '">' + inner + '</svg>';
+}
+function renderZukan(){
+  const owned = PARTS.filter(p => S.parts[p.id]).length;
+  $('colCount').textContent = owned + ' / ' + PARTS.length;
+  $('colBar').style.width = (owned / PARTS.length * 100) + '%';
+  $('colMsg').textContent = owned >= PARTS.length ? '🎉 コンプリート!!'
+    : 'コンプまであと' + (PARTS.length - owned) + '!';
+  $('zukanBody').innerHTML = CATS.map(c => {
+    const ps = catParts(c.id);
+    if (!ps.length) return '';
+    const got = ps.filter(p => S.parts[p.id]).length;
+    return '<div class="zsec"><div class="zhead"><b>' + c.n + '</b><span>' + got + ' / ' + ps.length + '</span></div>'
+      + '<div class="grid">' + ps.map(p => tile(p, false)).join('') + '</div></div>';
+  }).join('');
+}
+function tile(p, selectable){
+  const have = S.parts[p.id] || 0;
+  const on = selectable && S.wear[p.cat] === p.id;
+  const price = PRICE[p.r];
+  const canBuy = selectable && !have && price && (S.coins || 0) >= price;
+  let mark = '';
+  if (!have){
+    mark = selectable && price
+      ? '<span class="t-price">' + (buyPending === p.id ? 'こうかんする?' : '<span class="coin">光</span>' + price) + '</span>'
+      : '<span class="t-lock">🔒</span>';
+  }
+  const tag = selectable ? 'button' : 'div';
+  return '<' + tag + (selectable ? ' type="button"' : '') + ' class="tile' + (have ? '' : ' lock') + (on ? ' on' : '')
+    + (canBuy ? ' buyable' : '') + (buyPending === p.id ? ' confirm' : '')
+    + '" data-id="' + p.id + '"' + (selectable ? ' aria-pressed="' + String(on) + '"' : '') + '>'
+    + (have > 1 ? '<span class="t-num">×' + have + '</span>' : '')
+    + tileSVG(p) + mark
+    + '<div class="t-name">' + (have ? p.n : '???') + '</div>'
+    + '<div class="t-star stars-' + p.r + '">' + '★'.repeat(p.r) + '</div></' + tag + '>';
+}
+/* ---- きせかえ画面 ---- */
+function clearBuyPending(){ if (buyTimer) clearTimeout(buyTimer); buyTimer = null; buyPending = null; }
+function restoreDressFocus(kind, value){
+  if (!kind || !value) return;
+  requestAnimationFrame(() => {
+    const list = kind === 'cat' ? document.querySelectorAll('#catTabs .cat') : document.querySelectorAll('#dressGrid .tile');
+    const key = kind === 'cat' ? 'c' : 'id';
+    const target = Array.from(list).find(el => el.dataset[key] === value);
+    if (target) target.focus();
+  });
+}
+function currentDressFocus(){
+  const el = document.activeElement;
+  if (el && el.classList && el.classList.contains('cat')) return { kind:'cat', value:el.dataset.c };
+  if (el && el.classList && el.classList.contains('tile')) return { kind:'tile', value:el.dataset.id };
+  return null;
+}
+function renderDress(focusKind, focusValue){
+  $('dressPreview').innerHTML = avatarSVG('m-active');
+  const nu = nextUnlock();
+  $('coinBar').innerHTML = '<span class="coin">光</span>光老化よぼうコイン <b>' + (S.coins || 0) + '</b> まい'
+    + (nu ? '<span class="nextun">つぎのパーツまで あと ' + nu.left + ' まい</span>' : '<span class="nextun">ぜんぶ でてきたよ!</span>');
+  const shownCats = CATS.filter(c => catParts(c.id).some(isUnlocked));
+  if (!shownCats.some(c => c.id === dressCat)) dressCat = (shownCats[0] || CATS[0]).id;
+  $('catTabs').innerHTML = shownCats.map(c => {
+    const ps = catParts(c.id).filter(isUnlocked), got = ps.filter(p => S.parts[p.id]).length;
+    const active = c.id === dressCat;
+    return '<button type="button" class="cat' + (active ? ' on' : '') + '" data-c="' + c.id
+      + '" aria-pressed="' + String(active) + '">'
+      + c.n + '<small>' + got + '/' + ps.length + '</small></button>';
+  }).join('');
+  const ps = catParts(dressCat).filter(isUnlocked);
+  const none = (dressCat === 'base') ? '' :
+    '<button type="button" class="tile' + (S.wear[dressCat] === 'none' ? ' on' : '') + '" data-id="none" aria-pressed="' + String(S.wear[dressCat] === 'none') + '">'
+    + '<svg viewBox="0 0 120 120"><g opacity=".18">' + baseOf().svg + '</g></svg>'
+    + '<div class="t-name">なし</div><div class="t-star">　</div></button>';
+  $('dressGrid').innerHTML = none + ps.map(p => tile(p, true)).join('');
+  restoreDressFocus(focusKind, focusValue);
+}
+function renderLog(){
+  $('sStreak').textContent = curStreak();
+  $('sBest').textContent = S.bestStreak;
+  $('sMonth').textContent = monthCount();
+  $('sTotal').textContent = S.total;
+  const wd = ['日','月','火','水','木','金','土'];
+  let html = '';
+  for (let i = 0; i < 14; i++){
+    const d = calendarDayOffset(-i);
+    const c = S.log[ds(d)] || 0;
+    const label = (d.getMonth()+1) + '/' + d.getDate() + ' (' + wd[d.getDay()] + ')'
+      + (i === 0 ? ' きょう' : '');
+    html += '<div class="dayrow"><span class="d">' + label + '</span><span class="suns">'
+      + (c > 0 ? '☀️'.repeat(Math.max(0, Math.min(c, 6))) + (c > 6 ? ' +' + (c-6) : '') : '<span class="none">—</span>')
+      + '</span></div>';
+  }
+  $('dayList').innerHTML = html;
+}
+
+
+/* ================= サウンド ================= */
+function ensureAudio(){
+  try {
+    if (!ac || ac.state === 'closed') ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended'){
+      const resumed = ac.resume();
+      if (resumed && typeof resumed.then === 'function') resumed.then(() => {
+        if (S && ac && ac.state === 'running'){
+          const st = homeState(); renderHome(st); prevState = st;
+        }
+      }).catch(() => {});
+    }
+    return !!ac;
+  } catch(e){ return false; }
+}
+function chime(kind){
+  if (!S.sound || !ac || ac.state !== 'running') return false;
+  try {
+    const t = ac.currentTime;
+    const seq = kind === 'alarm'
+      ? [[659.25,0],[880,.18],[1046.5,.36],[880,.6],[1046.5,.78]]
+      : [[783.99,0],[1046.5,.14]];
+    seq.forEach(p => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.value = p[0];
+      g.gain.setValueAtTime(0, t + p[1]);
+      g.gain.linearRampToValueAtTime(.22, t + p[1] + .02);
+      g.gain.exponentialRampToValueAtTime(.001, t + p[1] + .55);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t + p[1]); o.stop(t + p[1] + .6);
+    });
+    return true;
+  } catch(e){ return false; }
+}
+function armAudio(){
+  if (!S || !S.sound) return;
+  const wasReady = !!ac && ac.state === 'running';
+  if (ensureAudio() && !wasReady){
+    const st = homeState();
+    renderHome(st); prevState = st;
+  }
+}
+
+/* ================= ガチャ ================= */
+function focusGachaAction(){
+  if (!$('gacha').classList.contains('show')) return;
+  const wear = $('gWear');
+  (wear.style.display !== 'none' ? wear : $('gNext')).focus();
+}
+function cancelGachaTimers(){
+  clearTimeout(gachaTransitionTimer); clearTimeout(gachaRevealTimer);
+  gachaTransitionTimer = null; gachaRevealTimer = null;
+  gachaGeneration++; gachaTransitioning = false;
+  $('gNext').disabled = false; $('gWear').disabled = false;
+}
+function finishGachaTransition(delay = 0, generation = gachaGeneration){
+  clearTimeout(gachaTransitionTimer);
+  gachaTransitionTimer = setTimeout(() => {
+    if (generation !== gachaGeneration || !$('gacha').classList.contains('show')) return;
+    gachaTransitioning = false;
+    $('gNext').disabled = false;
+    $('gWear').disabled = false;
+    focusGachaAction();
+  }, delay);
+}
+function showGachaQueue(){
+  if (gachaTransitioning) return;
+  clearTimeout(gachaRevealTimer); gachaRevealTimer = null;
+  const generation = ++gachaGeneration;
+  gachaTransitioning = true;
+  $('gNext').disabled = true;
+  if (!gachaQueue.length){
+    $('gacha').classList.remove('show'); syncModalIsolation(); renderZukan(); renderDress();
+    gachaTransitioning = false; $('gNext').disabled = false;
+    $('nuttaBtn').focus();
+    return;
+  }
+  const g = gachaQueue.shift();
+  hideToast();
+  $('gacha').classList.add('show');
+  syncModalIsolation();
+  $('gachaSheet').focus();
+  if (g.opened){                                  // あたらしいパーツが でてきた
+    $('gStage1').style.display = 'none';
+    $('gStage2').style.display = 'block';
+    const badge = $('gBadge');
+    badge.textContent = '🔓 かいほう!'; badge.className = 'g-badge g-bonusbadge'; badge.style.display = 'inline-block';
+    $('gEmoji').innerHTML = '<div style="font-size:80px">🎊</div>';
+    $('gName').textContent = 'あたらしいパーツ ' + g.opened + 'こ!';
+    $('gStars').textContent = '';
+    $('gSub').textContent = 'コインをためたから、えらべるパーツがふえたよ。「きせかえ」で見てみよう!';
+    $('gWear').style.display = 'none';
+    $('gNext').textContent = gachaQueue.length ? 'つぎへ →' : 'やったー!';
+    confetti(); chime('soft');
+    finishGachaTransition(350, generation);
+    return;
+  }
+  if (g.coins){                                   // コインをもらった
+    $('gStage1').style.display = 'block';
+    $('gStage2').style.display = 'none';
+    gachaRevealTimer = setTimeout(() => {
+      gachaRevealTimer = null;
+      if (generation !== gachaGeneration || !$('gacha').classList.contains('show') || !S.onboard) return;
+      $('gStage1').style.display = 'none';
+      $('gStage2').style.display = 'block';
+      const badge = $('gBadge');
+      if (g.coins > 1){
+        badge.textContent = '🎉 ボーナス!'; badge.className = 'g-badge g-bonusbadge'; badge.style.display = 'inline-block';
+      } else badge.style.display = 'none';
+      $('gEmoji').innerHTML = COIN_SVG;
+      $('gName').textContent = '光老化よぼうコイン ×' + g.coins;
+      $('gStars').textContent = '';
+      const nu2 = nextUnlock();
+      $('gSub').textContent = 'ぜんぶで ' + S.coins + ' まい。'
+        + (nu2 ? 'あと ' + nu2.left + ' まいで あたらしいパーツが でてくるよ!' : '「きせかえ」でこうかんできるよ!');
+      $('gWear').style.display = 'none';
+      $('gNext').textContent = gachaQueue.length ? 'つぎへ →' : 'やったー!';
+      if (g.coins > 1) confetti();
+      chime('soft');
+      finishGachaTransition(0, generation);
+    }, 1000);
+    return;
+  }
+  $('gStage1').style.display = 'block';
+  $('gStage2').style.display = 'none';
+  gachaRevealTimer = setTimeout(() => {
+    gachaRevealTimer = null;
+    if (generation !== gachaGeneration || !$('gacha').classList.contains('show') || !S.onboard) return;
+    $('gStage1').style.display = 'none';
+    $('gStage2').style.display = 'block';
+    const badge = $('gBadge'), isBase = (g.item.cat === 'base');
+    if (g.firstLabel){
+      badge.textContent = '🎉 ' + g.firstLabel; badge.className = 'g-badge g-bonusbadge'; badge.style.display = 'inline-block';
+    } else if (g.bonusLabel){
+      badge.textContent = '🎉 ' + g.bonusLabel; badge.className = 'g-badge g-bonusbadge'; badge.style.display = 'inline-block';
+    } else if (isBase && g.isNew){
+      badge.textContent = 'あたらしい なかま!'; badge.className = 'g-badge g-bonusbadge'; badge.style.display = 'inline-block';
+    } else if (g.isNew){
+      badge.textContent = 'NEW!'; badge.className = 'g-badge'; badge.style.display = 'inline-block';
+    } else badge.style.display = 'none';
+    $('gEmoji').innerHTML = tileSVG(g.item);
+    $('gName').textContent = g.item.n;
+    const st = $('gStars');
+    st.textContent = '★'.repeat(g.item.r);
+    st.className = 'g-stars stars-' + g.item.r;
+    const cn = (CATS.find(c => c.id === g.item.cat) || {}).n || '';
+    $('gSub').textContent = g.firstLabel ? 'ぬりサンに つけてあげたよ!つぎもぬると、もっとふえるよ。'
+      : g.bonusLabel ? 'れんぞくのとくべつな ごほうびだよ!'
+      : (g.isNew ? '「' + cn + '」の あたらしいパーツだよ!' : 'ずかんのカウントが ふえたよ!');
+    $('gWear').style.display = (g.isNew && !g.autoWear) ? 'block' : 'none';
+    $('gWear').onclick = async () => {
+      $('gWear').disabled = true;
+      const tx = await mutateState(() => {
+        if (!S.parts[g.item.id]) return { changed:false, missing:true };
+        S.wear[g.item.cat] = g.item.id;
+        return { changed:true };
+      });
+      if (!tx.ok || (tx.value && tx.value.missing)){
+        $('gWear').disabled = false;
+        renderAll();
+        return;
+      }
+      dressCat = g.item.cat; renderAll(); toast('つけたよ!🎨'); showGachaQueue();
+    };
+    $('gNext').textContent = gachaQueue.length ? 'つぎへ →' : 'やったー!';
+    if (g.item.r >= 3 || isBase) confetti();
+    chime('soft');
+    finishGachaTransition(0, generation);
+  }, 1000);
+}
+function confetti(){
+  const sheet = document.querySelector('#gacha .sheet');
+  const cols = ['#FFB300','#FF6B6B','#4DA3FF','#7BD98A','#C46BFF','#FF8A3D'];
+  for (let i = 0; i < 26; i++){
+    const s = document.createElement('span');
+    s.className = 'confetti';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.background = cols[i % cols.length];
+    s.style.animationDuration = (1.4 + Math.random() * 1.2) + 's';
+    s.style.animationDelay = (Math.random() * .3) + 's';
+    sheet.appendChild(s);
+    setTimeout(() => s.remove(), 3200);
+  }
+}
+
+/* ================= ぬった! ================= */
+async function onNutta(){
+  if (recordPending) return;
+  recordPending = true;
+  try {
+    ensureAudio();
+    const tx = await mutateState(() => {
+      const now = Date.now(), rewards = [];
+      // きょうまだ1回もぬっていなければ、日またぎ直後でも記録する
+      if (S.lastAppliedAt && now - S.lastAppliedAt < 30 * 60000 && appliedToday())
+        return { changed:false, duplicate:true };
+      const t = today();
+      if (S.lastDate !== t){
+        S.streak = (S.lastDate === yesterday()) ? S.streak + 1 : 1;
+        S.lastDate = t;
+        if (S.streak > S.bestStreak) S.bestStreak = S.streak;
+      }
+      S.log[t] = (S.log[t] || 0) + 1;
+      S.total++;
+      S.lastAppliedAt = now;
+      S.nextDueAt = now + S.intervalMin * 60000;
+
+      // 欠けている固定パーツを優先し、3つそろった後はコイン
+      const starterId = FIRST_REWARDS.find(id => !S.parts[id]);
+      if (starterId){
+        const item = partById(starterId);
+        S.parts[item.id] = (S.parts[item.id] || 0) + 1;
+        S.starter = FIRST_REWARDS.filter(id => !!S.parts[id]).length;
+        S.wear[item.cat] = item.id;
+        rewards.push({ item, isNew:true, autoWear:true,
+          firstLabel:'はじめての「' + (CATS.find(c => c.id === item.cat) || {}).n + '」!' });
+      } else {
+        const r = Math.random();
+        const n = r < .85 ? 1 : (r < .97 ? 3 : 5);
+        const before = PARTS.filter(isUnlocked).length;
+        S.coins = (S.coins || 0) + n;
+        S.coinsTotal = (S.coinsTotal || 0) + n;
+        const opened = PARTS.filter(isUnlocked).length - before;
+        rewards.push({ coins:n });
+        if (opened > 0) rewards.push({ opened });
+      }
+      PARTS.filter(p => p.bonus && S.streak >= p.bonus && !S.parts[p.id])
+        .forEach(b => { S.parts[b.id] = 1;
+          rewards.push({ item:b, isNew:true, bonusLabel:b.bonus + '日れんぞくたっせい!' }); });
+      return { changed:true, rewards };
+    });
+    if (!tx.ok){ renderAll(); return; }
+    if (tx.value && tx.value.duplicate){
+      toast('さっきぬったばかりだよ!きろくずみ ✅(コインは30分に1回)');
+      return;
+    }
+    dueChimes = 0;
+    gachaQueue.push(...tx.value.rewards);
+    renderAll();
+    showGachaQueue();
+  } finally { recordPending = false; }
+}
+
+/* ================= 描画・時計 ================= */
+function renderAll(){
+  const st = homeState();
+  renderHome(st); prevState = st;
+  renderChips(); renderUV(); renderTip(); renderZukan(); renderDress(); renderLog();
+  requestAnimationFrame(syncTabbarHeight);
+}
+let lastDayKey = today();
+function tick(){
+  const dk = today();
+  if (dk !== lastDayKey){ lastDayKey = dk; renderAll(); }   // 日をまたいだら画面を更新
+  const st = homeState();
+  if (st !== prevState){ renderHome(st); renderChips(); prevState = st; }
+  if (st === 'active'){
+    const remain = S.nextDueAt - Date.now();
+    $('countdown').textContent = fmtRemain(remain);
+    const frac = Math.min(1, Math.max(0, remain / (S.intervalMin * 60000)));
+    $('ringFg').setAttribute('stroke-dashoffset', CIRC * (1 - frac));
+  }
+  if (st === 'due'){
+    const now = Date.now();
+    if (dueChimes === 0 || (dueChimes < 4 && now - lastChimeAt > 180000)){
+      if (chime('alarm')){ dueChimes++; lastChimeAt = now; }
+    }
+    document.title = (Math.floor(now/1000) % 2 ? '⏰ ぬりなおして!' : '☀️ ' ) + ' ぬりサン!';
+  } else if (document.title !== APP_TITLE){
+    document.title = APP_TITLE;
+  }
+}
+
+/* ================= 小物 ================= */
+function toast(msg){
+  const modal = Array.from(document.querySelectorAll('.overlay.show')).pop();
+  const local = modal && modal.querySelector('.modal-status');
+  if (local){
+    delete local.dataset.runtimeWarning;
+    local.setAttribute('role','status'); local.setAttribute('aria-live','polite');
+    local.textContent = msg; local.classList.remove('error'); local.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { local.classList.remove('show'); showRuntimeWarning(); }, 3200);
+    return;
+  }
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+function hideToast(){
+  clearTimeout(toastTimer);
+  $('toast').classList.remove('show');
+  document.querySelectorAll('.modal-status').forEach(el => {
+    el.classList.remove('show','error'); delete el.dataset.runtimeWarning;
+    el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
+  });
+}
+function banner(msg){
+  const modal = Array.from(document.querySelectorAll('.overlay.show')).pop();
+  const local = modal && modal.querySelector('.modal-status');
+  if (local){
+    delete local.dataset.runtimeWarning;
+    local.setAttribute('role','alert'); local.setAttribute('aria-live','assertive');
+    local.textContent = msg; local.classList.add('show','error');
+    return;
+  }
+  delete $('banner').dataset.runtimeWarning;
+  $('bannerText').textContent = msg; $('banner').classList.add('show');
+}
+function runtimeWarningText(){
+  const messages = [];
+  if (stateReadFailed)
+    messages.push('きろくをよみこめなかったよ。大切なデータをまもるため、よみこめるまで上書きしないよ。');
+  if (store.kind === 'mem')
+    messages.push('このかんきょうではデータをほぞんできないため、がめんをとじるときえちゃうよ。');
+  if (stateWriteFailed)
+    messages.push('このたんまつにほぞんできなかったよ。ブラウザのせっていや空きようりょうをたしかめてね。');
+  if (!regionDataAvailable)
+    messages.push('ちいきデータをよみこめなかったよ。せっていで、すんでいるところをえらんでね。');
+  return messages.join(' ');
+}
+function showRuntimeWarning(){
+  document.querySelectorAll('.modal-status[data-runtime-warning="true"]').forEach(el => {
+    el.classList.remove('show','error'); delete el.dataset.runtimeWarning;
+    el.textContent = ''; el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
+  });
+  if ($('banner').dataset.runtimeWarning === 'true'){
+    $('banner').classList.remove('show'); delete $('banner').dataset.runtimeWarning; $('bannerText').textContent = '';
+  }
+  const msg = runtimeWarningText();
+  if (!msg) return;
+  const modal = Array.from(document.querySelectorAll('.overlay.show')).pop();
+  const local = modal && modal.querySelector('.modal-status');
+  if (local){
+    if (local.classList.contains('show')) return;
+    local.dataset.runtimeWarning = 'true';
+    local.setAttribute('role','alert'); local.setAttribute('aria-live','assertive');
+    local.textContent = msg; local.classList.add('show','error');
+    return;
+  }
+  if ($('banner').classList.contains('show')) return;
+  $('banner').dataset.runtimeWarning = 'true';
+  $('bannerText').textContent = msg; $('banner').classList.add('show');
+}
+function syncModalIsolation(){
+  const modalOpen = Array.from(document.querySelectorAll('.overlay')).some(el => el.classList.contains('show'));
+  [$('app'), document.querySelector('nav.tabbar')].forEach(el => {
+    if (!el) return;
+    el.toggleAttribute('inert', modalOpen);
+    if (modalOpen) el.setAttribute('aria-hidden', 'true'); else el.removeAttribute('aria-hidden');
+  });
+  document.body.classList.toggle('modal-open', modalOpen);
+  if (modalOpen){
+    $('toast').classList.remove('show');
+    $('banner').classList.remove('show');
+  }
+  showRuntimeWarning();
+}
+function trapModalFocus(e){
+  if (e.key !== 'Tab') return;
+  const modal = Array.from(document.querySelectorAll('.overlay.show')).pop();
+  if (!modal) return;
+  const focusable = Array.from(modal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'))
+    .filter(el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+  if (!focusable.length){
+    e.preventDefault();
+    const sheet = modal.querySelector('.sheet'); if (sheet) sheet.focus();
+    return;
+  }
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))){
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))){
+    e.preventDefault(); first.focus();
+  }
+}
+function reconcileOnboardRuntime(){
+  const focusWasInOnboard = $('onboard').contains(document.activeElement);
+  if (S.onboard){
+    $('onboard').classList.remove('show');
+    startLiveUVUpdates();
+  } else {
+    stopLiveUVUpdates();
+    gachaQueue = [];
+    cancelGachaTimers();
+    $('gacha').classList.remove('show');
+    $('settings').classList.remove('show');
+    switchTab('home', true);
+    $('onboard').classList.add('show');
+  }
+  syncModalIsolation();
+  if (S.onboard && focusWasInOnboard) $('nuttaBtn').focus();
+  if (!S.onboard) $('obStart').focus();
+}
+
+/* ================= タブ ================= */
+function switchTab(v, resetScroll = false){
+  if (!Object.prototype.hasOwnProperty.call(tabScroll, v)) return;
+  const scroller = document.scrollingElement || document.documentElement;
+  tabScroll[activeTab] = window.scrollY || scroller.scrollTop || 0;
+  clearBuyPending();
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+  $('view-' + v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(b => {
+    const active = b.dataset.v === v;
+    b.classList.toggle('on', active);
+    if (active) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  if (v === 'log') renderLog();
+  if (v === 'zukan') renderZukan();
+  if (v === 'dress') renderDress();
+  activeTab = v;
+  const target = resetScroll ? 0 : (tabScroll[v] || 0);
+  if (resetScroll) tabScroll[v] = 0;
+  requestAnimationFrame(() => {
+    scroller.scrollTop = target;
+    if (document.body) document.body.scrollTop = target;
+  });
+}
+
+let tabResizeObserver = null;
+function syncTabbarHeight(){
+  const tabbar = document.querySelector('.tabinner');
+  if (!tabbar) return;
+  const height = Math.ceil(tabbar.getBoundingClientRect().height);
+  if (height > 0) document.documentElement.style.setProperty('--tabActualH', height + 'px');
+}
+function watchTabbarHeight(){
+  syncTabbarHeight();
+  window.addEventListener('resize', syncTabbarHeight);
+  if (typeof ResizeObserver === 'function'){
+    tabResizeObserver = new ResizeObserver(syncTabbarHeight);
+    tabResizeObserver.observe(document.querySelector('.tabinner'));
+  }
+}
+
+/* ================= せってい ================= */
+function syncSettingsUI(){
+  $('regionSel').value = S.region;
+  $('soundSw').checked = S.sound;
+  document.querySelectorAll('#intervalSeg button').forEach(b => {
+    const active = Number(b.dataset.min) === S.intervalMin;
+    b.classList.toggle('on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+}
+let resetArmed = false, resetTimer = null;
+
+/* ================= 初期化 ================= */
+async function init(){
+  await loadState();
+  fixWear();
+  renderAll();
+  watchTabbarHeight();
+  if (stateDirty) await saveState();
+  if (migratedLegacy){
+    setTimeout(() => toast('あつめたなかまが きせかえパーツに なったよ!🎨'), 900); }
+  syncSettingsUI();
+  if (!S.onboard){
+    $('onboard').classList.add('show');
+    setTimeout(() => $('obStart').focus(), 0);
+  }
+  syncModalIsolation();
+
+  setInterval(tick, 1000);
+  setInterval(renderUV, 60000);
+  if (S.onboard) startLiveUVUpdates();
+  document.addEventListener('pointerdown', armAudio, { capture:true });
+  document.addEventListener('keydown', armAudio, { capture:true });
+  document.addEventListener('keydown', trapModalFocus);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden){
+      tick(); renderUV();
+      resumeLiveUVUpdates();
+    } });
+  window.addEventListener('storage', e => {
+    if (e.key !== KEY && e.key !== null) return;
+    if (e.key === null || e.newValue === null){
+      adoptEmptyState();
+      reconcileOnboardRuntime(); renderAll(); syncSettingsUI();
+      return;
+    }
+    syncLatestState(e.newValue).then(ok => {
+      if (ok){ reconcileOnboardRuntime(); renderAll(); syncSettingsUI(); }
+    });
+  });
+
+  /* --- イベント --- */
+  $('nuttaBtn').addEventListener('click', onNutta);
+  $('tipNext').addEventListener('click', () => {
+    tipIdx = (tipIdx + 1) % TIPS.length; renderTip(); });
+  document.querySelectorAll('.tab').forEach(b =>
+    b.addEventListener('click', () => switchTab(b.dataset.v)));
+  $('gNext').addEventListener('click', showGachaQueue);
+
+  $('gearBtn').addEventListener('click', () => {
+    hideToast(); syncSettingsUI(); $('settings').classList.add('show'); syncModalIsolation();
+    const sheet = document.querySelector('#settings .sheet');
+    $('regionSel').focus({ preventScroll:true }); sheet.scrollTop = 0; });
+  $('setClose').addEventListener('click', () => {
+    $('settings').classList.remove('show'); syncModalIsolation(); $('gearBtn').focus(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && $('settings').classList.contains('show')){
+      $('settings').classList.remove('show'); syncModalIsolation(); $('gearBtn').focus();
+    }
+  });
+  document.querySelectorAll('#intervalSeg button').forEach(b =>
+    b.addEventListener('click', async () => {
+      const selected = Number(b.dataset.min);
+      const tx = await mutateState(() => {
+        S.intervalMin = selected;
+        if (appliedToday() && S.lastAppliedAt)
+          S.nextDueAt = S.lastAppliedAt + S.intervalMin * 60000;
+        return { changed:true };
+      });
+      syncSettingsUI(); renderAll();
+      if (tx.ok) toast('ぬりなおしのかんかく:' + (S.intervalMin/60) + '時間にしたよ'); }));
+  $('soundSw').addEventListener('change', async e => {
+    const checked = e.target.checked;
+    const tx = await mutateState(() => { S.sound = checked; return { changed:true }; });
+    syncSettingsUI();
+    if (tx.ok && S.sound){ ensureAudio(); chime('soft'); }
+  });
+  $('regionSel').addEventListener('change', async e => {
+    const selected = e.target.value;
+    const tx = await mutateState(() => {
+      S.region = selected; S.regionManual = true;
+      return { changed:true };
+    });
+    syncSettingsUI(); renderUV();
+    if (tx.ok) toast('すんでいるところを「' + region().n + '」にしたよ'); });
+  $('catTabs').addEventListener('click', e => {
+    const b = e.target.closest('.cat'); if (!b) return;
+    clearBuyPending(); dressCat = b.dataset.c; renderDress('cat', dressCat); });
+  $('dressGrid').addEventListener('click', async e => {
+    const t = e.target.closest('.tile'); if (!t) return;
+    await syncLatestState();
+    const id = t.dataset.id;
+    if (id !== 'none' && !S.parts[id]){          // もっていない → こうかん
+      const p = partById(id), price = p && PRICE[p.r];
+      if (!price){ toast('これは まいにちつづけると もらえるよ!'); return; }
+      if ((S.coins || 0) < price){
+        clearBuyPending();
+        toast('コインが ' + (price - (S.coins || 0)) + ' まい たりないよ');
+        return;
+      }
+      if (buyPending !== id){                     // 1回目:かくにん
+        clearBuyPending();
+        buyPending = id;
+        buyTimer = setTimeout(() => {
+          const focus = currentDressFocus();
+          buyPending = null; buyTimer = null;
+          renderDress(focus && focus.kind, focus && focus.value);
+        }, 4000);
+        renderDress('tile', id);
+        toast(p.n + 'をこうかんする? もういちどおしてね');
+        return;
+      }
+      clearBuyPending();                          // 2回目:こうかん
+      const tx = await mutateState(() => {
+        if (S.parts[id]){
+          S.wear[p.cat] = id;
+          return { changed:true, alreadyOwned:true };
+        }
+        if ((S.coins || 0) < price)
+          return { changed:false, shortage:price - (S.coins || 0) };
+        if (!isUnlocked(p)) return { changed:false, unavailable:true };
+        S.coins -= price;
+        S.parts[id] = 1;
+        S.wear[p.cat] = id;
+        return { changed:true, purchased:true };
+      });
+      renderAll(); restoreDressFocus('tile', id); setMascot(mascotState);
+      if (!tx.ok) return;
+      if (tx.value.shortage){ toast('コインが ' + tx.value.shortage + ' まい たりないよ'); return; }
+      if (tx.value.unavailable){ toast('このパーツは まだえらべないよ'); return; }
+      toast(tx.value.purchased ? p.n + ' をこうかんしたよ!🎉' : p.n + ' をつけたよ!🎨');
+      return;
+    }
+    clearBuyPending();
+    const tx = await mutateState(() => {
+      if (id !== 'none'){
+        const p = partById(id);
+        if (!p || p.cat !== dressCat || !S.parts[id]) return { changed:false, unavailable:true };
+      }
+      S.wear[dressCat] = id;
+      return { changed:true };
+    });
+    renderDress('tile', id); setMascot(mascotState);
+    if (tx.ok && tx.value && tx.value.unavailable) toast('このパーツは えらべないよ');
+    else if (tx.ok){
+      const p = id === 'none' ? null : partById(id);
+      toast(id === 'none' ? 'このパーツをはずしたよ' : p.n + ' をつけたよ!🎨');
+    } });
+  $('dressRandom').addEventListener('click', async () => {
+    const tx = await mutateState(() => {
+      CATS.forEach(c => {
+        const own = catParts(c.id).filter(p => S.parts[p.id]);
+        if (c.id === 'base'){ if (own.length) S.wear.base = own[Math.floor(Math.random()*own.length)].id; return; }
+        const pool = own.concat([{ id:'none' }]);
+        S.wear[c.id] = pool[Math.floor(Math.random()*pool.length)].id;
+      });
+      return { changed:true };
+    });
+    renderDress(); setMascot(mascotState); if (tx.ok) toast('おまかせコーデ!🎲'); });
+  $('dressReset').addEventListener('click', async () => {
+    const tx = await mutateState(() => { S.wear = defWear(); return { changed:true }; });
+    renderDress(); setMascot(mascotState); if (tx.ok) toast('さいしょのすがたに もどしたよ'); });
+  $('resetBtn').addEventListener('click', async () => {
+    const btn = $('resetBtn');
+    if (!resetArmed){
+      resetArmed = true; btn.classList.add('armed');
+      btn.textContent = 'ほんとうにけす?(もういちどおす)';
+      resetTimer = setTimeout(() => { resetArmed = false;
+        btn.classList.remove('armed'); btn.textContent = 'データをぜんぶけす'; }, 4000);
+      return;
+    }
+    clearTimeout(resetTimer); resetArmed = false;
+    clearBuyPending();
+    const cleared = await clearPersistedState();
+    btn.classList.remove('armed'); btn.textContent = 'データをぜんぶけす';
+    if (!cleared){ syncSettingsUI(); renderAll(); return; }
+    stopLiveUVUpdates();
+    gachaQueue = [];
+    cancelGachaTimers();
+    dueChimes = 0; lastChimeAt = 0; dressCat = 'base'; lastDayKey = today();
+    switchTab('home', true);
+    $('settings').classList.remove('show');
+    syncSettingsUI(); renderAll();
+    $('onboard').classList.add('show');
+    syncModalIsolation();
+    $('obStart').focus();
+    toast('データをけしたよ'); });
+
+  $('obStart').addEventListener('click', async () => {
+    ensureAudio();
+    const tx = await mutateState(() => { S.onboard = true; return { changed:true }; });
+    if (!tx.ok){ syncSettingsUI(); renderAll(); return; }
+    $('onboard').classList.remove('show');
+    syncModalIsolation();
+    switchTab('home', true);
+    startLiveUVUpdates();
+    $('nuttaBtn').focus();
+    toast('ようこそ!まずは「ぬった!」からスタート☀️'); });
+}
+init();
+</script>
+</body>
+</html>

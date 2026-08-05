@@ -1,0 +1,16 @@
+{
+  "name": "nuri-sun-web",
+  "version": "1.3.2",
+  "private": true,
+  "scripts": {
+    "test": "node test-nurisan.js && node --expose-gc qa-extra.js && node qa-regression.js && node qa-deep.js",
+    "test:browser": "node qa-browser.js && node qa-browser-deep.js",
+    "test:all": "npm test && npm run test:browser"
+  },
+  "devDependencies": {
+    "@fontsource/noto-sans-jp": "^5.2.7",
+    "axe-core": "^4.10.3",
+    "jsdom": "26.1.0",
+    "puppeteer-core": "^24.16.0"
+  }
+}
