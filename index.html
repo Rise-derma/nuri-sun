@@ -1441,7 +1441,9 @@ function renderDress(focusKind, focusValue){
   $('dressPreview').innerHTML = avatarSVG('m-active');
   const nu = nextUnlock();
   $('coinBar').innerHTML = '<span class="coin">光</span>光老化よぼうコイン <b>' + (S.coins || 0) + '</b> まい'
-    + (nu ? '<span class="nextun">つぎのパーツまで あと ' + nu.left + ' まい</span>' : '<span class="nextun">ぜんぶ でてきたよ!</span>');
+   + (nu
+  ? '<span class="nextun">あと ' + nu.left + ' まいゲットで、こうかんできるパーツが ' + nu.count + ' こふえるよ！</span>'
+  : '<span class="nextun">ぜんぶ こうかんできるようになったよ！</span>');
   const shownCats = CATS.filter(c => catParts(c.id).some(isUnlocked));
   if (!shownCats.some(c => c.id === dressCat)) dressCat = (shownCats[0] || CATS[0]).id;
   $('catTabs').innerHTML = shownCats.map(c => {
