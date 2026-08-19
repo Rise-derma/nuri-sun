@@ -428,6 +428,9 @@ select.txt{background:#fff;height:50px}
         <option value="kyushu">きゅうしゅう</option>
         <option value="okinawa">おきなわ・あまみ</option>
       </select>
+      <label class="fl" for="prefSel" style="margin-top:10px">とどうふけん</label>
+      <select class="txt" id="prefSel"></select>
+      <p class="disclaimer" style="margin-top:8px">地方べつのUV目安は、晴天時の月ごとのピークを想定した概算値です【出典を記載してください】。都道府県を選んだ場合は、その県の代表地点(市区町村の平均)の緯度で地方の値を線形補間した参考値を表示します。天候・標高・海陸のちがいは反映していません。実際の値により近いのは、位置情報を許可したときの「いまのよそう」(Open-Meteo)です。</p>
       <p class="disclaimer" id="settingsPrivacy" style="margin-top:8px">いまいるばしょのUVよそうのため、いばしょを小数2けた(およそ1km)にまるめてOpen-Meteoへおくります。このアプリには、くわしいいばしょをほぞんしません。Open-Meteoでは、トラブルたいおうのため、IPアドレスやいばしょをふくむつうしんのきろくがのこることがあり、90日後にけされます。<a id="settingsPrivacyLink" href="https://open-meteo.com/en/terms" target="_blank" rel="noopener">Open-Meteoのきまり</a></p>
     </div>
     <div class="row">
@@ -630,6 +633,35 @@ function faceWrap(b, inner){
   return '<g transform="translate(' + (60 + f.x) + ',' + (60 + f.y) + ') scale(' + f.s + ') translate(-60,-60)">'
     + inner + '</g>';
 }
+// ---- キャラの色ちがい ----
+// 本体SVGは fill="var(--b1)" / "var(--b2)" で描かれているので、
+// 形はそのまま使い回し、d(ひるま)と n2(よる)の2色だけを差しかえる。
+const BASE_COLORS = [
+  { from:'base-sun', id:'base-sun-dusk',   n:'ぬりサン(ゆうやけ)',   r:2, d:['#FF8A4D','#FFD9B0'], n2:['#D98A62','#F2D3BC'] },
+  { from:'base-sun', id:'base-sun-night',  n:'ぬりサン(よぞら)',     r:2, d:['#7C86D6','#CDD4FF'], n2:['#6E77B8','#BEC5EA'] },
+  { from:'base-sun', id:'base-sun-sakura', n:'ぬりサン(さくら)',     r:2, d:['#FF9EC4','#FFDCEA'], n2:['#D98CAA','#F0CFDD'] },
+  { from:'base-drop', id:'base-drop-mint', n:'しずくちゃん(みどり)', r:2, d:['#7FD9B9','#DFF6EE'], n2:['#8FC4B0','#D2ECE3'] },
+  { from:'base-drop', id:'base-drop-grape',n:'しずくちゃん(むらさき)',r:2, d:['#B79ECB','#EDE3F5'], n2:['#A08FB2','#DED3E8'] },
+  { from:'base-drop', id:'base-drop-lemon',n:'しずくちゃん(きいろ)', r:2, d:['#FFD65C','#FFF3C9'], n2:['#E0C070','#F5E9C4'] },
+  { from:'base-cloud', id:'base-cloud-eve',n:'くもりん(ゆうぐれ)',   r:2, d:['#FFC7D6','#FFF0F4'], n2:['#DCB2BE','#F2E2E7'] },
+  { from:'base-cloud', id:'base-cloud-sky',n:'くもりん(そらいろ)',   r:2, d:['#BFE4FF','#F0FAFF'], n2:['#A8C6DE','#DFEDF5'] },
+  { from:'base-cloud', id:'base-cloud-gray',n:'くもりん(あまぐも)',  r:2, d:['#C6CEDA','#EEF2F7'], n2:['#AAB2BE','#DDE2E9'] },
+  { from:'base-sunflower', id:'base-sunflower-red',  n:'ひまわりん(あか)',   r:2, d:['#E06868','#FF9A6B'], n2:['#C88080','#E8A98F'] },
+  { from:'base-sunflower', id:'base-sunflower-white',n:'ひまわりん(しろ)',   r:2, d:['#E8DFC8','#FFFBEF'], n2:['#CCC4B0','#EFEADC'] },
+  { from:'base-sunflower', id:'base-sunflower-pink', n:'ひまわりん(ピンク)', r:2, d:['#E888A8','#FFC0D4'], n2:['#C88898','#E8B5C4'] },
+  { from:'base-dolphin', id:'base-dolphin-mint',  n:'イルカプリンス(みどり)',   r:3, d:['#A8E0CC','#E6FBF4'], n2:['#93C9B8','#D6F0E8'] },
+  { from:'base-dolphin', id:'base-dolphin-gold',  n:'イルカプリンス(きいろ)',   r:3, d:['#F5D9A8','#FFF4E0'], n2:['#C9B893','#F0E6D6'] },
+  { from:'base-dolphin-p', id:'base-dolphin-p-sky', n:'イルカプリンセス(そら)', r:3, d:['#C9E4FB','#E9F5FD'], n2:['#A8BFCF','#D8E6F0'] },
+  { from:'base-dolphin-p', id:'base-dolphin-p-lav', n:'イルカプリンセス(むらさき)', r:3, d:['#DCC9FB','#F1E9FD'], n2:['#B8A8CF','#E1D8F0'] },
+];
+BASE_COLORS.forEach(v => {
+  const b = PARTS.find(p => p.id === v.from);
+  if (!b) return;
+  const copy = { id:v.id, cat:'base', n:v.n, r:v.r, headTop:b.headTop, svg:b.svg, d:v.d, n2:v.n2 };
+  if (b.face) copy.face = b.face;
+  PARTS.push(copy);
+});
+
 const partById = id => PARTS.find(p => p.id === id) || null;
 
 // かいほうのじゅんばん:レア度がひくい順、カテゴリをかわりばんこに
@@ -731,7 +763,7 @@ const monthKey = () => { const d = new Date(); return d.getFullYear() + '-' + pa
 function defS(){
   return { onboard:false, starter:0, coins:0, coinsTotal:0,
     intervalMin:180, sound:true, lastAppliedAt:0, nextDueAt:0,
-    region:'kanto', regionManual:false,
+    region:'kanto', pref:null, regionManual:false,
     parts:{}, wear:defWear(), migrated:false,
     lastDate:'', streak:0, bestStreak:0, total:0, log:{}, col:{} };
 }
@@ -956,6 +988,101 @@ const REGIONS = [
   { id:'kyushu',   n:'きゅうしゅう',             p:[3,4,6,8,9,10,10,10,8,6,4,3] },
   { id:'okinawa',  n:'おきなわ・あまみ',       p:[4,5,7,9,10,11,11,11,10,8,5,4] },
 ];
+const PREF_ANCHORS = [[26.61,'okinawa'],[32.87,'kyushu'],[34.32,'chugoku'],[34.66,'kinki'],[35.8,'kanto'],[35.87,'chubu'],[38.88,'tohoku'],[43.34,'hokkaido']];
+const PREFS = [
+  { id:'hokkaido', n:'ほっかいどう', r:'hokkaido', la:43.34, lo:142.29 },
+  { id:'aomori', n:'あおもりけん', r:'tohoku', la:40.78, lo:140.87 },
+  { id:'iwate', n:'いわてけん', r:'tohoku', la:39.65, lo:141.4 },
+  { id:'miyagi', n:'みやぎけん', r:'tohoku', la:38.33, lo:140.92 },
+  { id:'akita', n:'あきたけん', r:'tohoku', la:39.8, lo:140.32 },
+  { id:'yamagata', n:'やまがたけん', r:'tohoku', la:38.45, lo:140.17 },
+  { id:'fukushima', n:'ふくしまけん', r:'tohoku', la:37.39, lo:140.33 },
+  { id:'ibaraki', n:'いばらきけん', r:'kanto', la:36.22, lo:140.26 },
+  { id:'tochigi', n:'とちぎけん', r:'kanto', la:36.59, lo:139.9 },
+  { id:'gunma', n:'ぐんまけん', r:'kanto', la:36.41, lo:139.05 },
+  { id:'saitama', n:'さいたまけん', r:'kanto', la:35.97, lo:139.48 },
+  { id:'chiba', n:'ちばけん', r:'kanto', la:35.58, lo:140.21 },
+  { id:'tokyo', n:'とうきょうと', r:'kanto', la:35.25, lo:139.59 },
+  { id:'kanagawa', n:'かながわけん', r:'kanto', la:35.42, lo:139.43 },
+  { id:'niigata', n:'にいがたけん', r:'chubu', la:37.62, lo:138.96 },
+  { id:'toyama', n:'とやまけん', r:'chubu', la:36.71, lo:137.26 },
+  { id:'ishikawa', n:'いしかわけん', r:'chubu', la:36.79, lo:136.76 },
+  { id:'fukui', n:'ふくいけん', r:'chubu', la:35.82, lo:136.12 },
+  { id:'yamanashi', n:'やまなしけん', r:'chubu', la:35.58, lo:138.67 },
+  { id:'nagano', n:'ながのけん', r:'chubu', la:36.1, lo:138.07 },
+  { id:'gifu', n:'ぎふけん', r:'chubu', la:35.52, lo:136.9 },
+  { id:'shizuoka', n:'しずおかけん', r:'chubu', la:34.95, lo:138.49 },
+  { id:'aichi', n:'あいちけん', r:'chubu', la:35.08, lo:137.0 },
+  { id:'mie', n:'みえけん', r:'kinki', la:34.57, lo:136.46 },
+  { id:'shiga', n:'しがけん', r:'kinki', la:35.15, lo:136.14 },
+  { id:'kyoto', n:'きょうとふ', r:'kinki', la:35.05, lo:135.64 },
+  { id:'osaka', n:'おおさかふ', r:'kinki', la:34.62, lo:135.51 },
+  { id:'hyogo', n:'ひょうごけん', r:'kinki', la:34.88, lo:134.93 },
+  { id:'nara', n:'ならけん', r:'kinki', la:34.46, lo:135.82 },
+  { id:'wakayama', n:'わかやまけん', r:'kinki', la:33.95, lo:135.45 },
+  { id:'tottori', n:'とっとりけん', r:'chugoku', la:35.38, lo:133.73 },
+  { id:'shimane', n:'しまねけん', r:'chugoku', la:35.23, lo:132.65 },
+  { id:'okayama', n:'おかやまけん', r:'chugoku', la:34.82, lo:133.87 },
+  { id:'hiroshima', n:'ひろしまけん', r:'chugoku', la:34.48, lo:132.67 },
+  { id:'yamaguchi', n:'やまぐちけん', r:'chugoku', la:34.12, lo:131.71 },
+  { id:'tokushima', n:'とくしまけん', r:'chugoku', la:33.99, lo:134.37 },
+  { id:'kagawa', n:'かがわけん', r:'chugoku', la:34.27, lo:133.97 },
+  { id:'ehime', n:'えひめけん', r:'chugoku', la:33.63, lo:132.81 },
+  { id:'kochi', n:'こうちけん', r:'chugoku', la:33.44, lo:133.46 },
+  { id:'fukuoka', n:'ふくおかけん', r:'kyushu', la:33.59, lo:130.65 },
+  { id:'saga', n:'さがけん', r:'kyushu', la:33.27, lo:130.18 },
+  { id:'nagasaki', n:'ながさきけん', r:'kyushu', la:33.09, lo:129.74 },
+  { id:'kumamoto', n:'くまもとけん', r:'kyushu', la:32.67, lo:130.76 },
+  { id:'oita', n:'おおいたけん', r:'kyushu', la:33.28, lo:131.46 },
+  { id:'miyazaki', n:'みやざきけん', r:'kyushu', la:32.19, lo:131.3 },
+  { id:'kagoshima', n:'かごしまけん', r:'kyushu', la:30.42, lo:130.19 },
+  { id:'okinawa', n:'おきなわけん', r:'okinawa', la:26.17, lo:127.5 }
+];
+
+/* ---- 都道府県べつのUVめやす ----
+   地方べつの月ごとのめやすを、各都道府県の代表地点(市区町村の平均)の緯度で
+   線形ほかんした参考値。地方のアンカー緯度は、その地方の代表地点の平均緯度。
+   お天気や海ぞい・山あいのちがいはふくまない、あくまで目安。 */
+function prefPeaks(lat){
+  const pts = PREF_ANCHORS.map(a => [a[0], (REGIONS.find(r => r.id === a[1]) || REGIONS[2]).p]);
+  const out = [];
+  for (let m = 0; m < 12; m++){
+    let v;
+    if (lat <= pts[0][0]) v = pts[0][1][m];
+    else if (lat >= pts[pts.length-1][0]) v = pts[pts.length-1][1][m];
+    else {
+      v = pts[pts.length-1][1][m];
+      for (let i = 0; i < pts.length - 1; i++){
+        const a = pts[i], b = pts[i+1];
+        if (lat >= a[0] && lat <= b[0]){
+          const t = (b[0] - a[0]) ? (lat - a[0]) / (b[0] - a[0]) : 0;
+          v = a[1][m] + (b[1][m] - a[1][m]) * t;
+          break;
+        }
+      }
+    }
+    out.push(Math.round(v * 10) / 10);
+  }
+  return out;
+}
+const prefById = id => PREFS.find(p => p.id === id) || null;
+function prefsOf(regionId){ return PREFS.filter(p => p.r === regionId); }
+function activePref(){ const p = prefById(S && S.pref); return (p && p.r === ((S && S.region) || 'kanto')) ? p : null; }
+function activePeaks(){ const p = activePref(); return p ? prefPeaks(p.la) : region().p; }
+function areaName(){ const p = activePref(); return p ? p.n : region().n; }
+// いちばん近い県(その地方の中だけでさがす)
+function prefFromCoords(lat, lon, regionId){
+  const list = prefsOf(regionId);
+  if (!list.length) return null;
+  let best = null, bd = Infinity;
+  list.forEach(p => {
+    const dy = lat - p.la, dx = (lon - p.lo) * Math.cos(lat * Math.PI / 180);
+    const d = dy*dy + dx*dx;
+    if (d < bd){ bd = d; best = p; }
+  });
+  return best ? best.id : null;
+}
+
 const REGION_SOURCE = window.NURISAN_REGION_SHAPES;
 const REGION_SHAPES = REGION_SOURCE && typeof REGION_SOURCE === 'object' && !Array.isArray(REGION_SOURCE)
   ? REGION_SOURCE : {};
@@ -1006,7 +1133,7 @@ function regionFromCoords(lat, lon){
   return null;
 }
 function uvEstimate(d){
-  const peaks = region().p;                     // 地域別の月別ピーク
+  const peaks = activePeaks();                  // 県(なければ地方)の月別ピーク
   const h = d.getHours() + d.getMinutes()/60;
   if (h < DAY_START || h >= DAY_END) return 0;
   const f = Math.sin(Math.PI * (h - DAY_START) / (DAY_END - DAY_START));
@@ -1129,6 +1256,8 @@ function fixData(){
   S.regionManual = S.regionManual === true;
   S.migrated = S.migrated === true;
   if (!REGIONS.some(r => r.id === S.region)) S.region = 'kanto';
+  const pf = PREFS.find(p => p.id === S.pref);
+  if (!pf || pf.r !== S.region) S.pref = null;      // 地方と合わない県はえらばない
   if (JSON.stringify(S) !== before) stateDirty = true;
 }
 /* ---- 装備の安全チェック ---- */
@@ -1234,6 +1363,13 @@ function renderChips(){
   $('chipStreak').textContent = curStreak();
   $('chipCoin').textContent = S.coins || 0;
 }
+function renderPrefOptions(){
+  const sel = $('prefSel'); if (!sel) return;
+  const list = prefsOf(S.region);
+  sel.innerHTML = '<option value="">えらばない(' + region().n + 'のめやす)</option>'
+    + list.map(p => '<option value="' + p.id + '">' + p.n + '</option>').join('');
+  sel.value = activePref() ? S.pref : '';
+}
 function renderUV(){
   const liveAge = Date.now() - uvLiveAt;
   const live = (uvLive != null) && liveAge >= 0 && liveAge < 60 * 60000;   // 取得した予測は1時間有効
@@ -1250,7 +1386,7 @@ function renderUV(){
   badge.classList.toggle('live', live);
   $('uvNote').textContent = live
     ? '※いまいるところの気しょうモデルによるUVのよそうち(Open-Meteo)。30分ごとにこうしんをためすよ。じっさいの数字とちがうことがあるよ。いばしょはおよそ1kmにまるめておくり、このアプリにはほぞんしないよ。'
-    : '※' + region().n + 'の、きせつと時間からのめやすだよ(すんでいるところは⚙️でかえられるよ)。'
+    : '※' + areaName() + 'の、きせつと時間からのめやすだよ(すんでいるところは⚙️でかえられるよ)。'
       + (store.kind === 'claude'
           ? 'お天気でほんとうの強さはかわるよ。'
           : 'スマホの「いばしょ」をオンにすると、いまいるところのよそうちになるよ。');
@@ -1300,9 +1436,11 @@ function initLiveUV(session = liveUvSession, force = false){
     lastPos = rounded;
     const r = regionFromCoords(lat, lon);
     if (r){
+      const np = prefFromCoords(lat, lon, r);
       const tx = await mutateState(() => {
-        if (S.regionManual || S.region === r) return { changed:false };
-        S.region = r; return { changed:true };
+        if (S.regionManual) return { changed:false };
+        if (S.region === r && S.pref === np) return { changed:false };
+        S.region = r; S.pref = np; return { changed:true };
       });
       if (tx.ok) renderUV();
     }
@@ -1931,6 +2069,7 @@ function watchTabbarHeight(){
 /* ================= せってい ================= */
 function syncSettingsUI(){
   $('regionSel').value = S.region;
+  renderPrefOptions();
   $('soundSw').checked = S.sound;
   document.querySelectorAll('#intervalSeg button').forEach(b => {
     const active = Number(b.dataset.min) === S.intervalMin;
@@ -2015,14 +2154,23 @@ async function init(){
     syncSettingsUI();
     if (tx.ok && S.sound){ ensureAudio(); chime('soft'); }
   });
+  $('prefSel').addEventListener('change', async e => {
+    const selected = e.target.value;
+    const tx = await mutateState(() => {
+      const next = selected || null;
+      if (S.pref === next) return { changed:false };
+      S.pref = next; S.regionManual = true; return { changed:true };
+    });
+    if (tx.ok){ renderUV(); toast('すんでいるところを「' + areaName() + '」にしたよ'); } });
   $('regionSel').addEventListener('change', async e => {
     const selected = e.target.value;
     const tx = await mutateState(() => {
-      S.region = selected; S.regionManual = true;
+      S.region = selected; S.pref = null; S.regionManual = true;
       return { changed:true };
     });
     syncSettingsUI(); renderUV();
-    if (tx.ok) toast('すんでいるところを「' + region().n + '」にしたよ'); });
+    renderPrefOptions();
+    if (tx.ok) toast('すんでいるところを「' + areaName() + '」にしたよ'); });
   $('catTabs').addEventListener('click', e => {
     const b = e.target.closest('.cat'); if (!b) return;
     clearBuyPending(); dressCat = b.dataset.c; renderDress('cat', dressCat); });
